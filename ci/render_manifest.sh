@@ -21,6 +21,8 @@ cat > "$OUT_FILE" <<EOF
 ## Upstreams
 
 - CI base: \`$CI_BASE_REPO@$CI_BASE_COMMIT\`
+- CI required commits: \`$CI_BASE_REQUIRED_COMMITS\`
+- CI required commit notes: \`$CI_BASE_REQUIRED_COMMIT_NOTES\`
 - WRT source: \`$WRT_REPO@$WRT_COMMIT\`
 - Custom APK feed: \`$CUSTOM_APK_FEED_REPO@$CUSTOM_APK_FEED_COMMIT\`
 - Custom APK feed URL: \`$CUSTOM_APK_FEED_URL\`
@@ -30,6 +32,13 @@ cat > "$OUT_FILE" <<EOF
 - Source packages: \`$SOURCE_PACKAGE_POLICY\`
 - Official feed packages: \`$OFFICIAL_PACKAGE_POLICY\`
 - Custom feed packages: \`$CUSTOM_PACKAGE_POLICY\`
+
+## Davidtall Overlay Policy
+
+- Source overlay packages: \`$DAVIDTALL_SOURCE_PACKAGE_POLICY\`
+- Source overlay mappings: \`$DAVIDTALL_SOURCE_OVERLAYS\`
+- Config package delta: \`$DAVIDTALL_CONFIG_PACKAGE_POLICY\`
+- Excluded packages: \`$DAVIDTALL_EXCLUDED_PACKAGES\`
 
 ## ImageBuilder Inputs
 

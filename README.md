@@ -25,6 +25,10 @@ The bootstrap version of this repository only does three things:
 The long-running build stages can be added on top of this lock later, but the
 first requirement is to make the floating inputs explicit and auditable.
 
+The lock also records `davidtall/OpenWRT-CI` overlays that must survive future
+syncs from `VIKINGYFY/OpenWRT-CI`, including required commits and package delta
+policy.
+
 ## Repository layout
 
 - `locks/combined-baseline.lock`
@@ -45,6 +49,10 @@ The baseline uses three package sources:
 - source-built inside the main firmware tree:
   - `nikki`
   - `dae`
+  - `gecoosac`
+  - `luci-app-daed`
+  - `luci-app-pushbot`
+  - `luci-app-lucky`
   - Qualcomm NSS related code from `VIKINGYFY/immortalwrt`
 - official feed / later ImageBuilder install:
   - `tailscale`
@@ -83,6 +91,26 @@ The lock file exports explicit ImageBuilder package groups for:
 
 Downstream workflows can consume these groups directly instead of rebuilding the
 same package selection logic.
+
+## Davidtall-specific overlays
+
+The current baseline preserves `davidtall/OpenWRT-CI` additions beyond
+`VIKINGYFY/OpenWRT-CI` in two forms:
+
+- required commits
+  - currently includes `ae52d1414db969fe6e08db7587bc3748e73a833b`
+  - this keeps the `gecoosac` source switch to `openwrt-fork/openwrt-gecoosac`
+- source overlay mappings
+  - `gecoosac=openwrt-fork/openwrt-gecoosac@main`
+  - `luci-app-daed=QiuSimons/luci-app-daed@master`
+  - `luci-app-pushbot=zzsj0928/luci-app-pushbot@master`
+  - `luci-app-lucky=sirpdboy/luci-app-lucky@main`
+- config package delta
+  - the lock tracks the extra package set enabled by `davidtall/OpenWRT-CI`
+  - `zerotier` and `luci-app-zerotier` are intentionally excluded
+
+Consumers should prefer the exported variables in `ci/export_env.sh` instead of
+hard-coding these overlays in downstream workflows.
 
 ## Local usage
 

@@ -1,11 +1,13 @@
 # Combined baseline for the IPQ60XX firmware pipeline.
 # This file is shell-compatible and can be sourced by downstream scripts.
 
-BASELINE_UPDATED_AT=2026-03-09T11:09:00+08:00
+BASELINE_UPDATED_AT=2026-03-09T11:29:47+08:00
 
 CI_BASE_REPO=davidtall/OpenWRT-CI
 CI_BASE_BRANCH=main
 CI_BASE_COMMIT=d793f2410350d1da80b7810f918828fe1c50d614
+CI_BASE_REQUIRED_COMMITS="ae52d1414db969fe6e08db7587bc3748e73a833b"
+CI_BASE_REQUIRED_COMMIT_NOTES="ae52d1414db969fe6e08db7587bc3748e73a833b=openwrt-fork/openwrt-gecoosac"
 
 WRT_REPO=VIKINGYFY/immortalwrt
 WRT_BRANCH=main
@@ -20,9 +22,14 @@ CUSTOM_APK_FEEDS="https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all"
 TARGET=qualcommax/ipq60xx
 PROFILES="IPQ60XX-NOWIFI IPQ60XX-WIFI"
 
+DAVIDTALL_SOURCE_PACKAGE_POLICY="dae nikki gecoosac luci-app-daed luci-app-pushbot luci-app-lucky"
+DAVIDTALL_SOURCE_OVERLAYS="gecoosac=openwrt-fork/openwrt-gecoosac@main luci-app-daed=QiuSimons/luci-app-daed@master luci-app-pushbot=zzsj0928/luci-app-pushbot@master luci-app-lucky=sirpdboy/luci-app-lucky@main"
+DAVIDTALL_CONFIG_PACKAGE_POLICY="autocore automount bash bind-dig bind-nslookup blkid block-mount btop cfdisk cgdisk coremark cpufreq curl default-settings default-settings-chn dmesg e2fsprogs f2fsck fdisk gdisk ip-full iperf3 kmod-bonding kmod-dsa kmod-fs-btrfs kmod-fs-ext4 kmod-fs-f2fs kmod-fuse kmod-inet-diag kmod-inet-mptcp-diag kmod-mtd-rw kmod-netlink-diag kmod-nft-arp kmod-nft-bridge kmod-nft-connlimit kmod-nft-core kmod-nft-dup-inet kmod-nft-fib kmod-nft-fullcone kmod-nft-nat kmod-nft-netdev kmod-nft-offload kmod-nft-queue kmod-nft-socket kmod-nft-tproxy kmod-nft-xfrm kmod-sound-core kmod-tcp-bbr kmod-tun kmod-usb-audio kmod-usb-core kmod-usb-dwc3 kmod-usb-net kmod-usb-net-asix kmod-usb-net-asix-ax88179 kmod-usb-net-cdc-eem kmod-usb-net-cdc-ether kmod-usb-net-cdc-mbim kmod-usb-net-cdc-ncm kmod-usb-net-cdc-subset kmod-usb-net-huawei-cdc-ncm kmod-usb-net-ipheth kmod-usb-net-qmi-wwan kmod-usb-net-qmi-wwan-fibocom kmod-usb-net-qmi-wwan-quectel kmod-usb-net-rndis kmod-usb-net-rtl8150 kmod-usb-net-rtl8152 kmod-usb-net-sierrawireless kmod-usb-ohci kmod-usb-storage kmod-usb-storage-extras kmod-usb-storage-uas kmod-usb-uhci kmod-usb-xhci kmod-usb3 kmod-veth kmod-wireguard libimobiledevice lsblk luci luci-app-autoreboot luci-app-cpufreq luci-app-dae luci-app-daed luci-app-ddns-go luci-app-gecoosac luci-app-nikki luci-app-ttyd luci-app-upnp luci-app-vlmcsd luci-app-wolplus luci-base luci-compat luci-lib-base luci-lib-ipkg luci-lua-runtime luci-proto-relay luci-proto-wireguard luci-theme-argon mkf2fs mmc-utils nand-utils openssh-keygen openssh-sftp-server openssl-util proto-bonding sfdisk sgdisk tcpdump usb-modeswitch usbmuxd usbutils v2ray-geodata-updater xz-utils"
+DAVIDTALL_EXCLUDED_PACKAGES="zerotier luci-app-zerotier"
+
 OFFICIAL_PACKAGE_POLICY="tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn"
 CUSTOM_PACKAGE_POLICY="luci-app-podman"
-SOURCE_PACKAGE_POLICY="nikki dae"
+SOURCE_PACKAGE_POLICY="dae nikki gecoosac luci-app-daed luci-app-pushbot luci-app-lucky"
 IMAGEBUILDER_OFFICIAL_PACKAGES="tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn"
 IMAGEBUILDER_CUSTOM_PACKAGES="luci-app-podman"
 IMAGEBUILDER_PODMAN_STACK="podman conmon external-protocol netavark luci-app-podman"
