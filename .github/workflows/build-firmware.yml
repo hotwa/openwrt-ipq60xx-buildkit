@@ -60,7 +60,7 @@ jobs:
         env:
           PROFILE: ${{ matrix.profile }}
           TEST_ONLY: ${{ inputs.test_only && 'true' || 'false' }}
-          ASSEMBLE_IMAGEBUILDER: ${{ inputs.assemble_imagebuilder && 'true' || 'false' }}
+          ASSEMBLE_IMAGEBUILDER: ${{ github.event_name == 'push' && 'true' || (inputs.assemble_imagebuilder && 'true' || 'false') }}
         run: |
           chmod +x ./ci/*.sh
           ./ci/build_firmware.sh
