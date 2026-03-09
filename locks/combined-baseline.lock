@@ -15,6 +15,7 @@ CUSTOM_APK_FEED_REPO=hotwa/openwrt-ipq60xx-apk-feed
 CUSTOM_APK_FEED_BRANCH=main
 CUSTOM_APK_FEED_COMMIT=1ca0652615bc7440a2de4f50cd186bb4aa4864a2
 CUSTOM_APK_FEED_URL=https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all
+CUSTOM_APK_FEEDS="https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all"
 
 TARGET=qualcommax/ipq60xx
 PROFILES="IPQ60XX-NOWIFI IPQ60XX-WIFI"
@@ -22,4 +23,8 @@ PROFILES="IPQ60XX-NOWIFI IPQ60XX-WIFI"
 OFFICIAL_PACKAGE_POLICY="tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn"
 CUSTOM_PACKAGE_POLICY="luci-app-podman"
 SOURCE_PACKAGE_POLICY="nikki dae"
-
+IMAGEBUILDER_OFFICIAL_PACKAGES="tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn"
+IMAGEBUILDER_CUSTOM_PACKAGES="luci-app-podman"
+IMAGEBUILDER_PODMAN_STACK="podman conmon external-protocol netavark luci-app-podman"
+IMAGEBUILDER_TAILSCALE_STACK="tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn"
+IMAGEBUILDER_NFS_STACK="nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn"

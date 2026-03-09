@@ -30,7 +30,15 @@ cat > "$OUT_FILE" <<EOF
 - Source packages: \`$SOURCE_PACKAGE_POLICY\`
 - Official feed packages: \`$OFFICIAL_PACKAGE_POLICY\`
 - Custom feed packages: \`$CUSTOM_PACKAGE_POLICY\`
+
+## ImageBuilder Inputs
+
+- Custom APK feeds: \`$CUSTOM_APK_FEEDS\`
+- ImageBuilder official packages: \`$IMAGEBUILDER_OFFICIAL_PACKAGES\`
+- ImageBuilder custom packages: \`$IMAGEBUILDER_CUSTOM_PACKAGES\`
+- Podman stack: \`$IMAGEBUILDER_PODMAN_STACK\`
+- Tailscale stack: \`$IMAGEBUILDER_TAILSCALE_STACK\`
+- NFS stack: \`$IMAGEBUILDER_NFS_STACK\`
 EOF
 
 note "manifest written: $OUT_FILE"
-

@@ -65,6 +65,25 @@ The baseline uses three package sources:
 - custom APK feed:
   - `luci-app-podman`
 
+`luci-app-podman` is intentionally separated from the rest of the Podman stack:
+
+- custom feed:
+  - `luci-app-podman`
+- official or same-baseline feed / later ImageBuilder install:
+  - `podman`
+  - `conmon`
+  - `external-protocol`
+  - `netavark`
+
+The lock file exports explicit ImageBuilder package groups for:
+
+- Podman
+- Tailscale
+- NFS
+
+Downstream workflows can consume these groups directly instead of rebuilding the
+same package selection logic.
+
 ## Local usage
 
 ```bash
@@ -73,4 +92,3 @@ bash -n ci/lib.sh ci/refresh_lock.sh ci/render_manifest.sh ci/export_env.sh
 ./ci/render_manifest.sh
 ./ci/export_env.sh --format shell
 ```
-
