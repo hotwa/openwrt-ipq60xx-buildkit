@@ -1,0 +1,25 @@
+# Combined baseline for the IPQ60XX firmware pipeline.
+# This file is shell-compatible and can be sourced by downstream scripts.
+
+BASELINE_UPDATED_AT=2026-03-09T11:09:00+08:00
+
+CI_BASE_REPO=davidtall/OpenWRT-CI
+CI_BASE_BRANCH=main
+CI_BASE_COMMIT=d793f2410350d1da80b7810f918828fe1c50d614
+
+WRT_REPO=VIKINGYFY/immortalwrt
+WRT_BRANCH=main
+WRT_COMMIT=9040dd58a7797933e6d9f68faca4da375a8ffb01
+
+CUSTOM_APK_FEED_REPO=hotwa/openwrt-ipq60xx-apk-feed
+CUSTOM_APK_FEED_BRANCH=main
+CUSTOM_APK_FEED_COMMIT=1ca0652615bc7440a2de4f50cd186bb4aa4864a2
+CUSTOM_APK_FEED_URL=https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all
+
+TARGET=qualcommax/ipq60xx
+PROFILES="IPQ60XX-NOWIFI IPQ60XX-WIFI"
+
+OFFICIAL_PACKAGE_POLICY="tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn"
+CUSTOM_PACKAGE_POLICY="luci-app-podman"
+SOURCE_PACKAGE_POLICY="nikki dae"
+

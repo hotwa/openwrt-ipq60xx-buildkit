@@ -1,0 +1,36 @@
+name: refresh-lock
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 2 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refresh combined lock
+        run: |
+          chmod +x ./ci/refresh_lock.sh ./ci/render_manifest.sh ./ci/export_env.sh
+          ./ci/refresh_lock.sh
+          ./ci/render_manifest.sh
+
+      - name: Commit lock updates
+        run: |
+          if git diff --quiet -- locks/combined-baseline.lock dist/current-baseline.md; then
+            echo "No baseline updates."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add locks/combined-baseline.lock dist/current-baseline.md
+          git commit -m "chore(lock): refresh combined baseline"
+          git push

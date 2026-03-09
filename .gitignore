@@ -1,0 +1,5 @@
+.worktrees/
+.cache/
+.tmp/
+dist/*
+!dist/current-baseline.md
