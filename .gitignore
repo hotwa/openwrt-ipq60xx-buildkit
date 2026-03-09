@@ -1,4 +1,5 @@
 .worktrees/
+.workspace/
 .cache/
 .tmp/
 dist/*

@@ -1,0 +1,68 @@
+name: build-firmware
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      test_only:
+        description: "Skip package download and firmware compile"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.profile }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - IPQ60XX-NOWIFI
+          - IPQ60XX-WIFI
+
+    steps:
+      - name: Checkout buildkit
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        uses: endersonmenezes/free-disk-space@v2
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/share/chromium /usr/local/share/powershell"
+          testing: false
+
+      - name: Install bootstrap tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt -yqq update
+          sudo -E apt -yqq install bc dos2unix git jq zstd
+
+      - name: Build firmware
+        env:
+          PROFILE: ${{ matrix.profile }}
+          TEST_ONLY: ${{ inputs.test_only && 'true' || 'false' }}
+        run: |
+          chmod +x ./ci/*.sh
+          ./ci/build_firmware.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.profile }}
+          path: dist/out/${{ matrix.profile }}
+          if-no-files-found: warn

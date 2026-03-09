@@ -29,6 +29,10 @@ The lock also records `davidtall/OpenWRT-CI` overlays that must survive future
 syncs from `VIKINGYFY/OpenWRT-CI`, including required commits and package delta
 policy.
 
+The repository now also contains a first-pass firmware workflow. It uses the
+combined lock to materialize a temporary build workspace and run a real source
+build for `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`.
+
 ## Repository layout
 
 - `locks/combined-baseline.lock`
@@ -41,6 +45,11 @@ policy.
   - emits shell or GitHub Actions style environment variables for consumers
 - `.github/workflows/refresh-lock.yml`
   - scheduled and manual lock refresh workflow
+- `.github/workflows/build-firmware.yml`
+  - first-pass firmware build workflow for the two IPQ60XX profiles
+- `ci/build_firmware.sh`
+  - clones the locked CI base and locked WRT source into a temporary workspace
+    and runs the upstream shell build flow
 
 ## Package policy
 
@@ -91,6 +100,25 @@ The lock file exports explicit ImageBuilder package groups for:
 
 Downstream workflows can consume these groups directly instead of rebuilding the
 same package selection logic.
+
+## Firmware workflow
+
+`build-firmware.yml` is intentionally narrower than the long-term target:
+
+- it validates that the combined baseline can perform a real source build
+- it reuses `davidtall/OpenWRT-CI` shell scripts and config from the locked
+  commit
+- it compiles `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`
+- it uploads `dist/out/<PROFILE>/` as artifacts
+
+What it does not do yet:
+
+- no ImageBuilder second stage
+- no custom feed package installation into the final image
+- no build cache tuning yet
+
+That layering comes after the first successful source-build run proves the
+baseline is executable.
 
 ## Davidtall-specific overlays
 
