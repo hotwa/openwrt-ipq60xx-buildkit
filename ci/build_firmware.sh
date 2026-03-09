@@ -29,6 +29,7 @@ WRT_PACKAGE="${WRT_PACKAGE:-}"
 CI_NAME="${CI_NAME:-buildkit-firmware}"
 IMAGEBUILDER_DIR="$WORKSPACE/.imagebuilder"
 IMAGEBUILDER_OUTPUT_DIR="$OUT_DIR/imagebuilder"
+IMAGEBUILDER_ARCHIVE=""
 
 fetch_repo_commit() {
   local repo="$1"
@@ -145,7 +146,7 @@ build_imagebuilder() {
   archive="$(find "$WORKSPACE/wrt/bin/targets" -type f -name '*imagebuilder*.tar.zst' | head -n 1 || true)"
   if [ -n "$archive" ]; then
     note "reuse existing imagebuilder archive: $archive"
-    printf '%s\n' "$archive"
+    IMAGEBUILDER_ARCHIVE="$archive"
     return
   fi
 
@@ -157,7 +158,7 @@ build_imagebuilder() {
 
   archive="$(find "$WORKSPACE/wrt/bin/targets" -type f -name '*imagebuilder*.tar.zst' | head -n 1 || true)"
   [ -n "$archive" ] || fail "imagebuilder archive not found after build"
-  printf '%s\n' "$archive"
+  IMAGEBUILDER_ARCHIVE="$archive"
 }
 
 append_unique_repo() {
@@ -175,7 +176,9 @@ assemble_imagebuilder_images() {
   local archive ib_root repo_file device bin_dir
   local preload_packages="$IMAGEBUILDER_ALL_PACKAGES"
 
-  archive="$(build_imagebuilder)"
+  build_imagebuilder
+  archive="$IMAGEBUILDER_ARCHIVE"
+  [ -n "$archive" ] || fail "imagebuilder archive path is empty"
 
   note "prepare imagebuilder workspace"
   rm -rf "$IMAGEBUILDER_DIR"
