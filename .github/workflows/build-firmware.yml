@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      assemble_imagebuilder:
+        description: "Build same-baseline ImageBuilder preload images"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -55,6 +60,7 @@ jobs:
         env:
           PROFILE: ${{ matrix.profile }}
           TEST_ONLY: ${{ inputs.test_only && 'true' || 'false' }}
+          ASSEMBLE_IMAGEBUILDER: ${{ inputs.assemble_imagebuilder && 'true' || 'false' }}
         run: |
           chmod +x ./ci/*.sh
           ./ci/build_firmware.sh

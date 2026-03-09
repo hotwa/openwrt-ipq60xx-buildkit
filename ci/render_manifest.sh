@@ -26,6 +26,7 @@ cat > "$OUT_FILE" <<EOF
 - WRT source: \`$WRT_REPO@$WRT_COMMIT\`
 - Custom APK feed: \`$CUSTOM_APK_FEED_REPO@$CUSTOM_APK_FEED_COMMIT\`
 - Custom APK feed URL: \`$CUSTOM_APK_FEED_URL\`
+- Official APK feeds: \`$OFFICIAL_APK_FEEDS\`
 
 ## Package Policy
 
@@ -48,6 +49,8 @@ cat > "$OUT_FILE" <<EOF
 - Podman stack: \`$IMAGEBUILDER_PODMAN_STACK\`
 - Tailscale stack: \`$IMAGEBUILDER_TAILSCALE_STACK\`
 - NFS stack: \`$IMAGEBUILDER_NFS_STACK\`
+- NFS kmods: \`$IMAGEBUILDER_NFS_KMODS\`
+- All preload packages: \`$IMAGEBUILDER_ALL_PACKAGES\`
 EOF
 
 note "manifest written: $OUT_FILE"

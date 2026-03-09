@@ -97,6 +97,8 @@ The lock file exports explicit ImageBuilder package groups for:
 - Podman
 - Tailscale
 - NFS
+- NFS kernel modules
+- full preload package set
 
 Downstream workflows can consume these groups directly instead of rebuilding the
 same package selection logic.
@@ -110,6 +112,8 @@ same package selection logic.
   commit
 - it compiles `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`
 - it uploads `dist/out/<PROFILE>/` as artifacts
+- it can optionally generate same-baseline ImageBuilder images with preloaded
+  `podman`, `tailscale`, and `nfs` package stacks
 
 What it does not do yet:
 
