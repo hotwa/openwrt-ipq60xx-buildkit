@@ -1,6 +1,6 @@
 # Buildkit Follow-up Checklist
 
-Last updated: 2026-03-09 15:14 CST
+Last updated: 2026-03-10 08:05 CST
 
 ## Current state
 
@@ -19,14 +19,21 @@ Last updated: 2026-03-09 15:14 CST
 
 ## Runs to watch now
 
-- [ ] Watch run `22842495963`
-  - Commit: `c68f424`
-  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22842495963>
-  - Goal: verify source build still succeeds with preload stage enabled on push
-- [ ] Watch run `22842479700`
+- [x] Run `22842479700` completed successfully.
   - Commit: `1e2c5b3`
   - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22842479700>
-  - Goal: transitional run, lower priority than `22842495963`
+  - Note: `ASSEMBLE_IMAGEBUILDER=false`, so this only proves source firmware build success.
+- [x] Run `22842495963` failed.
+  - Commit: `c68f424`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22842495963>
+  - Root cause: ImageBuilder archive path was polluted by stdout output from `build_imagebuilder()`.
+- [x] Run `22844206819` failed with the same root cause as `22842495963`.
+  - Commit: `cacc714`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22844206819>
+- [x] Run `22852454548` failed after the archive-path fix.
+  - Commit: `6ce9726`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22852454548>
+  - Root cause: ImageBuilder reached package selection but lacked the same-build local `packages/packages.adb`, used invalid external `APKINDEX.tar.gz` paths, and could not resolve `luci-app-podman` because the custom feed is not published.
 
 ## Important debugging notes
 
@@ -41,8 +48,14 @@ Last updated: 2026-03-09 15:14 CST
 - [ ] Do not “fix” the warnings above unless a completed failed run proves they are the real root cause.
 - [x] Local `gh` token cannot dispatch or cancel workflows.
   - Observed error: `HTTP 403 Resource not accessible by personal access token`
+- [x] `openwrt-ipq60xx-apk-feed` currently has no GitHub Pages site.
+  - `gh api repos/hotwa/openwrt-ipq60xx-apk-feed/pages` returns `404`.
+  - Current `luci-app-podman` failures are therefore not caused by missing kernel modules.
+- [x] The current preload strategy must do two things together:
+  - stage the same-build local target package repository into ImageBuilder as `packages/packages.adb`
+  - compile only the lightweight `luci-app-podman` LuCI package in the source build while keeping `podman` runtime installation in ImageBuilder
 
-## Next actions if run `22842495963` succeeds
+## Next actions if the next preload run succeeds
 
 - [ ] Confirm both jobs uploaded artifacts successfully.
 - [ ] Inspect artifacts for:
@@ -59,7 +72,7 @@ Last updated: 2026-03-09 15:14 CST
   - `luci-app-nfs`
 - [ ] If preload images are correct, update `hotwa/OpenWRT-CI` to consume buildkit outputs instead of rebuilding these package stacks in the main firmware workflow.
 
-## Next actions if run `22842495963` fails
+## Next actions if the next preload run fails
 
 - [ ] Fetch the failed job log tail first.
 - [ ] Record the first hard failure line, not just nearby warnings.

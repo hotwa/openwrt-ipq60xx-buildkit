@@ -1,6 +1,6 @@
 # Current IPQ60XX Combined Baseline
 
-- Updated at: `2026-03-09T11:29:47+08:00`
+- Updated at: `2026-03-09T15:14:09+08:00`
 - Target: `qualcommax/ipq60xx`
 - Profiles: `IPQ60XX-NOWIFI IPQ60XX-WIFI`
 
@@ -12,7 +12,7 @@
 - WRT source: `VIKINGYFY/immortalwrt@9040dd58a7797933e6d9f68faca4da375a8ffb01`
 - Custom APK feed: `hotwa/openwrt-ipq60xx-apk-feed@1ca0652615bc7440a2de4f50cd186bb4aa4864a2`
 - Custom APK feed URL: `https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all`
-- Official APK feeds: `https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/packages https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/base https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/luci https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/packages https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/routing`
+- Official APK feeds: `https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/packages/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/base/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/luci/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/packages/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/routing/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/telephony/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/video/packages.adb`
 
 ## Package Policy
 
@@ -29,7 +29,7 @@
 
 ## ImageBuilder Inputs
 
-- Custom APK feeds: `https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all`
+- Custom APK feeds: ``
 - ImageBuilder official packages: `tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn`
 - ImageBuilder custom packages: `luci-app-podman`
 - Podman stack: `podman conmon external-protocol netavark luci-app-podman`

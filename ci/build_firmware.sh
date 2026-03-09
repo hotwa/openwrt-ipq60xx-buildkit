@@ -97,6 +97,14 @@ normalize_scripts() {
   find "$WORKSPACE" -maxdepth 3 -type f -iname "*.sh" -exec chmod +x {} +
 }
 
+prepare_overlay_packages() {
+  local podman_makefile="$WORKSPACE/wrt/package/luci-app-podman/Makefile"
+
+  [ -f "$podman_makefile" ] || fail "missing luci-app-podman source overlay"
+  # Build only the lightweight LuCI frontend here; podman runtime comes from ImageBuilder.
+  sed -i 's/+podman//g' "$podman_makefile"
+}
+
 run_build_flow() {
   note "update feeds"
   (
@@ -112,12 +120,16 @@ run_build_flow() {
     "$WORKSPACE/Scripts/Handles.sh"
   )
 
+  note "prepare overlay packages"
+  prepare_overlay_packages
+
   note "generate config"
   (
     # shellcheck disable=SC1090
     . "$WORKSPACE/Scripts/function.sh"
     cd "$WORKSPACE/wrt"
     generate_config
+    grep -qxF 'CONFIG_PACKAGE_luci-app-podman=y' .config || printf '%s\n' 'CONFIG_PACKAGE_luci-app-podman=y' >> .config
     "$WORKSPACE/Scripts/Settings.sh"
     make defconfig -j"$JOBS"
   )
@@ -168,12 +180,43 @@ append_unique_repo() {
   grep -qxF "$repo_url" "$repo_file" 2>/dev/null || printf '%s\n' "$repo_url" >> "$repo_file"
 }
 
+resolve_target_package_repo() {
+  local repo_dir
+
+  repo_dir="$(find "$WORKSPACE/wrt/bin/targets" -type f -path '*/packages/packages.adb' -print | head -n 1 || true)"
+  [ -n "$repo_dir" ] || fail "same-build target package repository not found"
+  dirname "$repo_dir"
+}
+
+stage_local_imagebuilder_repo() {
+  local ib_root="$1"
+  local local_repo="$2"
+
+  [ -f "$local_repo/packages.adb" ] || fail "missing packages.adb in local repository: $local_repo"
+  rm -rf "$ib_root/packages"
+  ln -s "$local_repo" "$ib_root/packages"
+}
+
+write_imagebuilder_repositories() {
+  local repo_file="$1"
+  local repo_url
+
+  : > "$repo_file"
+  # ImageBuilder expects its same-build target repository under packages/packages.adb.
+  printf '%s\n' "packages/packages.adb" >> "$repo_file"
+
+  while read -r repo_url; do
+    [ -n "$repo_url" ] || continue
+    append_unique_repo "$repo_file" "$repo_url"
+  done <<< "$(printf '%s\n%s\n' "$OFFICIAL_APK_FEEDS" "$CUSTOM_APK_FEEDS" | tr ' ' '\n')"
+}
+
 load_profile_devices() {
   sed -n 's/^CONFIG_TARGET_DEVICE_.*_DEVICE_\(.*\)=y$/\1/p' "$WORKSPACE/Config/$PROFILE.txt" | sort -u
 }
 
 assemble_imagebuilder_images() {
-  local archive ib_root repo_file device bin_dir
+  local archive ib_root repo_file device bin_dir local_repo
   local preload_packages="$IMAGEBUILDER_ALL_PACKAGES"
 
   build_imagebuilder
@@ -187,12 +230,12 @@ assemble_imagebuilder_images() {
   ib_root="$(find "$IMAGEBUILDER_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)"
   [ -n "$ib_root" ] || fail "failed to unpack imagebuilder archive"
 
+  local_repo="$(resolve_target_package_repo)"
+  note "stage same-build local repository: $local_repo"
+  stage_local_imagebuilder_repo "$ib_root" "$local_repo"
+
   repo_file="$ib_root/repositories"
-  touch "$repo_file"
-  while read -r repo_url; do
-    [ -n "$repo_url" ] || continue
-    append_unique_repo "$repo_file" "$repo_url"
-  done <<< "$(printf '%s\n%s\n' "$OFFICIAL_APK_FEEDS" "$CUSTOM_APK_FEEDS" | tr ' ' '\n')"
+  write_imagebuilder_repositories "$repo_file"
 
   mkdir -p "$IMAGEBUILDER_OUTPUT_DIR"
   while read -r device; do
