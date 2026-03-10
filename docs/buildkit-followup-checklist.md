@@ -1,6 +1,6 @@
 # Buildkit Follow-up Checklist
 
-Last updated: 2026-03-10 16:55 CST
+Last updated: 2026-03-10 22:05 CST
 
 ## Current state
 
@@ -70,6 +70,11 @@ Last updated: 2026-03-10 16:55 CST
 - [ ] Current focused fix under test:
   - aggregate all same-build `.apk` outputs from `wrt/bin/targets/.../packages` and `wrt/bin/packages/*/*` into ImageBuilder `packages/`
   - explicitly enable source-built same-baseline packages required by preload image assembly: `kmod-fs-nfs`, `kmod-fs-nfsd`, `kmod-fs-nfs-v4`, `kmod-dm`, `nss-firmware-ipq60xx`, `nss-firmware`, `nss-eip-firmware`
+- [x] Run `22897972655` proved the same-build `.apk` aggregation works.
+  - Commit: `12a596c`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22897972655>
+  - Evidence: ImageBuilder staged `499` local `.apk` files.
+  - New root cause: local `packages/packages.adb` was not generated before `make image`, so `apk` ignored the same-build package set and fell back to external feeds.
 
 ## Next actions if the next preload run succeeds
 

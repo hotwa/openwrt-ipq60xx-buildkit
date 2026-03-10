@@ -255,6 +255,18 @@ stage_local_imagebuilder_repo() {
   note "staged same-build apk count: $copied_count"
 }
 
+prepare_local_imagebuilder_index() {
+  local ib_root="$1"
+
+  [ -d "$ib_root/packages" ] || fail "imagebuilder packages directory is missing"
+  note "build same-build local package index"
+  (
+    cd "$ib_root"
+    make package_index
+  )
+  [ -f "$ib_root/packages/packages.adb" ] || fail "imagebuilder local packages.adb was not generated"
+}
+
 write_imagebuilder_repositories() {
   local repo_file="$1"
   local repo_url
@@ -290,6 +302,7 @@ assemble_imagebuilder_images() {
   local_repo="$(resolve_target_package_repo)"
   note "stage same-build local repository: $local_repo"
   stage_local_imagebuilder_repo "$ib_root" "$local_repo"
+  prepare_local_imagebuilder_index "$ib_root"
 
   repo_file="$ib_root/repositories"
   write_imagebuilder_repositories "$repo_file"
