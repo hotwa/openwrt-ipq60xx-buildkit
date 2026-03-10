@@ -220,9 +220,8 @@ write_imagebuilder_repositories() {
   local repo_file="$1"
   local repo_url
 
-  : > "$repo_file"
-  # ImageBuilder expects its same-build target repository under packages/packages.adb.
-  printf '%s\n' "packages/packages.adb" >> "$repo_file"
+  [ -f "$repo_file" ] || : > "$repo_file"
+  sed -i '/^packages\/packages\.adb$/d' "$repo_file"
 
   while read -r repo_url; do
     [ -n "$repo_url" ] || continue
