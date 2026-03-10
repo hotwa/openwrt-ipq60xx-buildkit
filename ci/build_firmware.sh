@@ -110,6 +110,19 @@ prepare_overlay_packages() {
   sed -i 's/+podman//g' "$podman_makefile"
 }
 
+disable_excluded_packages() {
+  local config_file="$1"
+  local pkg
+
+  for pkg in $DAVIDTALL_EXCLUDED_PACKAGES; do
+    sed -i \
+      -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
+      -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
+      "$config_file"
+    printf '# CONFIG_PACKAGE_%s is not set\n' "$pkg" >> "$config_file"
+  done
+}
+
 run_build_flow() {
   note "update feeds"
   (
@@ -135,6 +148,7 @@ run_build_flow() {
     cd "$WORKSPACE/wrt"
     generate_config
     grep -qxF 'CONFIG_PACKAGE_luci-app-podman=y' .config || printf '%s\n' 'CONFIG_PACKAGE_luci-app-podman=y' >> .config
+    disable_excluded_packages .config
     "$WORKSPACE/Scripts/Settings.sh"
     make defconfig -j"$JOBS"
   )
