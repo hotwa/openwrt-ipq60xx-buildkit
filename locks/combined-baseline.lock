@@ -18,6 +18,8 @@ CUSTOM_APK_FEED_BRANCH=main
 CUSTOM_APK_FEED_COMMIT=1ca0652615bc7440a2de4f50cd186bb4aa4864a2
 CUSTOM_APK_FEED_URL=https://hotwa.github.io/openwrt-ipq60xx-apk-feed/all
 CUSTOM_APK_FEEDS=""
+SOURCE_LUCI_APP_PODMAN_REPO=Zerogiven-OpenWRT-Packages/luci-app-podman
+SOURCE_LUCI_APP_PODMAN_REF=4a15e161170ba8cdfec0f522b7a80cc54b9dd96b
 OFFICIAL_APK_FEEDS="https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/packages/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/base/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/luci/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/packages/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/routing/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/telephony/packages.adb https://downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/video/packages.adb"
 
 TARGET=qualcommax/ipq60xx

@@ -34,6 +34,10 @@ Last updated: 2026-03-10 08:05 CST
   - Commit: `6ce9726`
   - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22852454548>
   - Root cause: ImageBuilder reached package selection but lacked the same-build local `packages/packages.adb`, used invalid external `APKINDEX.tar.gz` paths, and could not resolve `luci-app-podman` because the custom feed is not published.
+- [x] Run `22880478254` failed quickly before compile.
+  - Commit: `0615a96`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22880478254>
+  - Root cause: buildkit assumed the CI base already included the `luci-app-podman` source overlay, but `CI_BASE_COMMIT=d793f241...` from `davidtall/OpenWRT-CI` does not.
 
 ## Important debugging notes
 
@@ -54,6 +58,7 @@ Last updated: 2026-03-10 08:05 CST
 - [x] The current preload strategy must do two things together:
   - stage the same-build local target package repository into ImageBuilder as `packages/packages.adb`
   - compile only the lightweight `luci-app-podman` LuCI package in the source build while keeping `podman` runtime installation in ImageBuilder
+- [x] Buildkit must fetch `luci-app-podman` directly by pinned repo/ref when the CI base does not provide it.
 
 ## Next actions if the next preload run succeeds
 

@@ -100,6 +100,11 @@ normalize_scripts() {
 prepare_overlay_packages() {
   local podman_makefile="$WORKSPACE/wrt/package/luci-app-podman/Makefile"
 
+  if [ ! -f "$podman_makefile" ]; then
+    note "fetch luci-app-podman source overlay: $SOURCE_LUCI_APP_PODMAN_REPO@$SOURCE_LUCI_APP_PODMAN_REF"
+    fetch_repo_commit "$SOURCE_LUCI_APP_PODMAN_REPO" "$SOURCE_LUCI_APP_PODMAN_REF" "$WORKSPACE/wrt/package/luci-app-podman"
+  fi
+
   [ -f "$podman_makefile" ] || fail "missing luci-app-podman source overlay"
   # Build only the lightweight LuCI frontend here; podman runtime comes from ImageBuilder.
   sed -i 's/+podman//g' "$podman_makefile"
