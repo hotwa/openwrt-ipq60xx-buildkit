@@ -1,6 +1,6 @@
 # Buildkit Follow-up Checklist
 
-Last updated: 2026-03-10 08:05 CST
+Last updated: 2026-03-10 16:55 CST
 
 ## Current state
 
@@ -38,6 +38,11 @@ Last updated: 2026-03-10 08:05 CST
   - Commit: `0615a96`
   - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22880478254>
   - Root cause: buildkit assumed the CI base already included the `luci-app-podman` source overlay, but `CI_BASE_COMMIT=d793f241...` from `davidtall/OpenWRT-CI` does not.
+- [x] Run `22891002718` failed after the repository-format fix.
+  - Commit: `991cbb7`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22891002718>
+  - Root cause: ImageBuilder reached package selection with a syntactically valid `repositories` file, but the staged same-build local repo was effectively empty (`OK: 0 B in 0 packages`).
+  - First missing packages: `luci-app-podman`, `nss-firmware-ipq60xx`, `nss-firmware`, `nss-eip-firmware`, `kmod-fs-nfs*`, `kmod-dm`, `libubox20260213`.
 
 ## Important debugging notes
 
@@ -59,6 +64,12 @@ Last updated: 2026-03-10 08:05 CST
   - stage the same-build local target package repository into ImageBuilder as `packages/packages.adb`
   - compile only the lightweight `luci-app-podman` LuCI package in the source build while keeping `podman` runtime installation in ImageBuilder
 - [x] Buildkit must fetch `luci-app-podman` directly by pinned repo/ref when the CI base does not provide it.
+- [x] Latest logs confirm the current hard failure is no longer repository syntax.
+  - Evidence: `assemble imagebuilder image` runs, then package selection fails.
+- [x] Latest logs show `zerotier` is still collected during feed installation but was not the first hard failure in run `22891002718`.
+- [ ] Current focused fix under test:
+  - aggregate all same-build `.apk` outputs from `wrt/bin/targets/.../packages` and `wrt/bin/packages/*/*` into ImageBuilder `packages/`
+  - explicitly enable source-built same-baseline packages required by preload image assembly: `kmod-fs-nfs`, `kmod-fs-nfsd`, `kmod-fs-nfs-v4`, `kmod-dm`, `nss-firmware-ipq60xx`, `nss-firmware`, `nss-eip-firmware`
 
 ## Next actions if the next preload run succeeds
 

@@ -123,6 +123,20 @@ disable_excluded_packages() {
   done
 }
 
+enable_source_overlay_packages() {
+  local config_file="$1"
+  local pkg
+
+  for pkg in $SOURCE_OVERLAY_PACKAGES; do
+    [ -n "$pkg" ] || continue
+    sed -i \
+      -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
+      -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
+      "$config_file"
+    printf 'CONFIG_PACKAGE_%s=y\n' "$pkg" >> "$config_file"
+  done
+}
+
 run_build_flow() {
   note "update feeds"
   (
@@ -149,7 +163,10 @@ run_build_flow() {
     generate_config
     grep -qxF 'CONFIG_PACKAGE_luci-app-podman=y' .config || printf '%s\n' 'CONFIG_PACKAGE_luci-app-podman=y' >> .config
     disable_excluded_packages .config
+    enable_source_overlay_packages .config
     "$WORKSPACE/Scripts/Settings.sh"
+    disable_excluded_packages .config
+    enable_source_overlay_packages .config
     make defconfig -j"$JOBS"
   )
 
@@ -207,13 +224,35 @@ resolve_target_package_repo() {
   dirname "$repo_dir"
 }
 
+collect_local_package_dirs() {
+  local target_repo="$1"
+  local arch_root="$WORKSPACE/wrt/bin/packages"
+
+  [ -d "$target_repo" ] && printf '%s\n' "$target_repo"
+  if [ -d "$arch_root" ]; then
+    find "$arch_root" -mindepth 2 -maxdepth 2 -type d | sort
+  fi
+}
+
 stage_local_imagebuilder_repo() {
   local ib_root="$1"
-  local local_repo="$2"
+  local target_repo="$2"
+  local repo_dir packages_dir copied_count
 
-  [ -f "$local_repo/packages.adb" ] || fail "missing packages.adb in local repository: $local_repo"
-  rm -rf "$ib_root/packages"
-  ln -s "$local_repo" "$ib_root/packages"
+  packages_dir="$ib_root/packages"
+  rm -rf "$packages_dir"
+  mkdir -p "$packages_dir"
+
+  copied_count=0
+  while read -r repo_dir; do
+    [ -n "$repo_dir" ] || continue
+    note "collect same-build packages from: $repo_dir"
+    find "$repo_dir" -maxdepth 1 -type f -name '*.apk' -exec cp -f {} "$packages_dir/" \;
+  done < <(collect_local_package_dirs "$target_repo")
+
+  copied_count="$(find "$packages_dir" -maxdepth 1 -type f -name '*.apk' | wc -l | tr -d ' ')"
+  [ "${copied_count:-0}" -gt 0 ] || fail "no same-build apk packages staged into imagebuilder packages directory"
+  note "staged same-build apk count: $copied_count"
 }
 
 write_imagebuilder_repositories() {
