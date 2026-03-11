@@ -141,6 +141,34 @@ enable_source_overlay_packages() {
   done
 }
 
+package_selected_in_config() {
+  local config_file="$1"
+  local pkg="$2"
+  local state="$3"
+
+  grep -qxF "CONFIG_PACKAGE_${pkg}=${state}" "$config_file"
+}
+
+enable_imagebuilder_source_build_packages() {
+  local config_file="$1"
+  local pkg
+
+  for pkg in $IMAGEBUILDER_ALL_PACKAGES; do
+    [ -n "$pkg" ] || continue
+    if package_selected_in_config "$config_file" "$pkg" "y"; then
+      continue
+    fi
+    if printf '%s\n' "$SOURCE_OVERLAY_PACKAGES" | tr ' ' '\n' | grep -qxF "$pkg"; then
+      continue
+    fi
+    sed -i \
+      -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
+      -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
+      "$config_file"
+    printf 'CONFIG_PACKAGE_%s=m\n' "$pkg" >> "$config_file"
+  done
+}
+
 run_build_flow() {
   note "update feeds"
   (
@@ -168,9 +196,11 @@ run_build_flow() {
     grep -qxF 'CONFIG_PACKAGE_luci-app-podman=y' .config || printf '%s\n' 'CONFIG_PACKAGE_luci-app-podman=y' >> .config
     disable_excluded_packages .config
     enable_source_overlay_packages .config
+    enable_imagebuilder_source_build_packages .config
     "$WORKSPACE/Scripts/Settings.sh"
     disable_excluded_packages .config
     enable_source_overlay_packages .config
+    enable_imagebuilder_source_build_packages .config
     make defconfig -j"$JOBS"
   )
 
