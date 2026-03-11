@@ -80,6 +80,11 @@ Last updated: 2026-03-11 00:15 CST
   - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22905819677>
   - Evidence: `make package_index` still failed to produce `packages/packages.adb`.
   - Root cause: ImageBuilder `make package_index` itself uses an `apk` wrapper that already points at `packages/packages.adb`, so it cannot bootstrap a missing local repo index.
+- [x] Local repo-only preload staging implemented in the worktree.
+  - Strategy: stage `wrt/bin/targets/.../packages` and `wrt/bin/packages/<arch>/*` as separate local repos under ImageBuilder `local/`.
+  - Strategy: generate missing `packages.adb` files locally with the bundled ImageBuilder `apk mkndx`.
+  - Strategy: write ImageBuilder `repositories` using only local relative `packages.adb` paths during preload assembly.
+  - Expected effect: stop mixing pinned source-build packages with mutable snapshot feed versions during package selection.
 
 ## Next actions if the next preload run succeeds
 

@@ -43,6 +43,7 @@ cat > "$OUT_FILE" <<EOF
 
 ## ImageBuilder Inputs
 
+- Repository mode: \`same-build local repos only during preload assembly\`
 - Custom APK feeds: \`$CUSTOM_APK_FEEDS\`
 - ImageBuilder official packages: \`$IMAGEBUILDER_OFFICIAL_PACKAGES\`
 - ImageBuilder custom packages: \`$IMAGEBUILDER_CUSTOM_PACKAGES\`

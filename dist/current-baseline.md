@@ -29,6 +29,7 @@
 
 ## ImageBuilder Inputs
 
+- Repository mode: `same-build local repos only during preload assembly`
 - Custom APK feeds: ``
 - ImageBuilder official packages: `tailscale luci-app-tailscale-community luci-i18n-tailscale-community-zh-cn podman conmon external-protocol netavark nfs-kernel-server nfs-kernel-server-utils nfs-kernel-server-v4 nfs-utils nfs-utils-v4 rpcbind luci-app-nfs luci-i18n-nfs-zh-cn`
 - ImageBuilder custom packages: `luci-app-podman`

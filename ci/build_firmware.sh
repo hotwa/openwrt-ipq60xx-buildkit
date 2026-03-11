@@ -10,7 +10,11 @@ require_cmd git bash find grep sed awk xargs tar sort
 source_lock
 
 PROFILE="${PROFILE:-}"
-[ -n "$PROFILE" ] || fail "PROFILE is required"
+BUILD_FIRMWARE_LIB_ONLY="${BUILD_FIRMWARE_LIB_ONLY:-false}"
+
+if [ "$BUILD_FIRMWARE_LIB_ONLY" != "true" ]; then
+  [ -n "$PROFILE" ] || fail "PROFILE is required"
+fi
 
 WORK_ROOT="${WORK_ROOT:-$ROOT_DIR/.workspace}"
 WORKSPACE="$WORK_ROOT/$PROFILE"
@@ -219,7 +223,7 @@ append_unique_repo() {
 resolve_target_package_repo() {
   local repo_dir
 
-  repo_dir="$(find "$WORKSPACE/wrt/bin/targets" -type f -path '*/packages/packages.adb' -print | head -n 1 || true)"
+  repo_dir="$(find "$WORKSPACE/wrt/bin/targets" -type f -path '*/packages/*.apk' -print | head -n 1 || true)"
   [ -n "$repo_dir" ] || fail "same-build target package repository not found"
   dirname "$repo_dir"
 }
@@ -234,52 +238,79 @@ collect_local_package_dirs() {
   fi
 }
 
-stage_local_imagebuilder_repo() {
-  local ib_root="$1"
+repo_alias_for_dir() {
+  local repo_dir="$1"
   local target_repo="$2"
-  local repo_dir packages_dir copied_count
 
-  packages_dir="$ib_root/packages"
-  rm -rf "$packages_dir"
-  mkdir -p "$packages_dir"
+  if [ "$repo_dir" = "$target_repo" ]; then
+    printf 'target\n'
+    return
+  fi
+
+  basename "$repo_dir"
+}
+
+prepare_local_imagebuilder_index_dir() {
+  local repo_dir="$1"
+  local apk_bin="$2"
+
+  [ -x "$apk_bin" ] || fail "imagebuilder apk tool is missing: $apk_bin"
+  [ -d "$repo_dir" ] || fail "imagebuilder repo directory is missing: $repo_dir"
+  find "$repo_dir" -maxdepth 1 -type f -name '*.apk' | grep -q . || \
+    fail "imagebuilder repo has no apk files: $repo_dir"
+  (
+    cd "$repo_dir"
+    "$apk_bin" mkndx --allow-untrusted --output packages.adb ./*.apk >/dev/null
+  )
+  [ -f "$repo_dir/packages.adb" ] || fail "imagebuilder local packages.adb was not generated: $repo_dir"
+}
+
+stage_local_imagebuilder_repos() {
+  local ib_root="$1"
+  local target_repo
+  local repo_root repo_dir repo_name dest apk_bin copied_count
+
+  target_repo="$(resolve_target_package_repo)"
+  repo_root="$ib_root/local"
+  apk_bin="$ib_root/staging_dir/host/bin/apk"
+
+  rm -rf "$repo_root"
+  mkdir -p "$repo_root"
 
   copied_count=0
   while read -r repo_dir; do
     [ -n "$repo_dir" ] || continue
-    note "collect same-build packages from: $repo_dir"
-    find "$repo_dir" -maxdepth 1 -type f -name '*.apk' -exec cp -f {} "$packages_dir/" \;
+    repo_name="$(repo_alias_for_dir "$repo_dir" "$target_repo")"
+    dest="$repo_root/$repo_name"
+    mkdir -p "$dest"
+    note "collect same-build packages from: $repo_dir -> $dest"
+    find "$repo_dir" -maxdepth 1 -type f \( -name '*.apk' -o -name 'packages.adb' \) -exec cp -f {} "$dest/" \;
+    if ! [ -f "$dest/packages.adb" ]; then
+      note "build same-build local package index: $dest"
+      prepare_local_imagebuilder_index_dir "$dest" "$apk_bin"
+    fi
+    copied_count="$((copied_count + $(find "$dest" -maxdepth 1 -type f -name '*.apk' | wc -l | tr -d ' ')))"
   done < <(collect_local_package_dirs "$target_repo")
 
-  copied_count="$(find "$packages_dir" -maxdepth 1 -type f -name '*.apk' | wc -l | tr -d ' ')"
-  [ "${copied_count:-0}" -gt 0 ] || fail "no same-build apk packages staged into imagebuilder packages directory"
+  [ "$copied_count" -gt 0 ] || fail "no same-build apk packages staged into imagebuilder local repos"
   note "staged same-build apk count: $copied_count"
-}
-
-prepare_local_imagebuilder_index() {
-  local ib_root="$1"
-  local apk_bin="$ib_root/staging_dir/host/bin/apk"
-
-  [ -d "$ib_root/packages" ] || fail "imagebuilder packages directory is missing"
-  [ -x "$apk_bin" ] || fail "imagebuilder apk tool is missing: $apk_bin"
-  note "build same-build local package index"
-  (
-    cd "$ib_root/packages"
-    "$apk_bin" mkndx --allow-untrusted --output packages.adb ./*.apk >/dev/null
-  )
-  [ -f "$ib_root/packages/packages.adb" ] || fail "imagebuilder local packages.adb was not generated"
 }
 
 write_imagebuilder_repositories() {
   local repo_file="$1"
-  local repo_url
+  local ib_root="$2"
+  local repo_path
 
-  [ -f "$repo_file" ] || : > "$repo_file"
-  sed -i '/^packages\/packages\.adb$/d' "$repo_file"
+  : > "$repo_file"
 
-  while read -r repo_url; do
-    [ -n "$repo_url" ] || continue
-    append_unique_repo "$repo_file" "$repo_url"
-  done <<< "$(printf '%s\n%s\n' "$OFFICIAL_APK_FEEDS" "$CUSTOM_APK_FEEDS" | tr ' ' '\n')"
+  while read -r repo_path; do
+    [ -n "$repo_path" ] || continue
+    repo_path="${repo_path#"$ib_root"/}"
+    repo_path="${repo_path#/}"
+    append_unique_repo "$repo_file" "$repo_path"
+  done < <(find "$ib_root/local" -type f -name 'packages.adb' | sort)
+
+  [ -s "$repo_file" ] || fail "imagebuilder repositories file is empty"
 }
 
 load_profile_devices() {
@@ -301,13 +332,11 @@ assemble_imagebuilder_images() {
   ib_root="$(find "$IMAGEBUILDER_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)"
   [ -n "$ib_root" ] || fail "failed to unpack imagebuilder archive"
 
-  local_repo="$(resolve_target_package_repo)"
-  note "stage same-build local repository: $local_repo"
-  stage_local_imagebuilder_repo "$ib_root" "$local_repo"
-  prepare_local_imagebuilder_index "$ib_root"
+  note "stage same-build local repositories"
+  stage_local_imagebuilder_repos "$ib_root"
 
   repo_file="$ib_root/repositories"
-  write_imagebuilder_repositories "$repo_file"
+  write_imagebuilder_repositories "$repo_file" "$ib_root"
 
   mkdir -p "$IMAGEBUILDER_OUTPUT_DIR"
   while read -r device; do
@@ -346,12 +375,18 @@ export_artifacts() {
   fi
 }
 
-prepare_workspace
-prepare_env_vars
-init_host_environment
-normalize_scripts
-run_build_flow
-[ "$TEST_ONLY" = "true" ] || [ "$ASSEMBLE_IMAGEBUILDER" != "true" ] || assemble_imagebuilder_images
-export_artifacts
+main() {
+  prepare_workspace
+  prepare_env_vars
+  init_host_environment
+  normalize_scripts
+  run_build_flow
+  [ "$TEST_ONLY" = "true" ] || [ "$ASSEMBLE_IMAGEBUILDER" != "true" ] || assemble_imagebuilder_images
+  export_artifacts
 
-note "build completed for $PROFILE"
+  note "build completed for $PROFILE"
+}
+
+if [ "$BUILD_FIRMWARE_LIB_ONLY" != "true" ]; then
+  main "$@"
+fi
