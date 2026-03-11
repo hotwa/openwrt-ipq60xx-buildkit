@@ -1,6 +1,6 @@
 # Buildkit Follow-up Checklist
 
-Last updated: 2026-03-10 22:05 CST
+Last updated: 2026-03-11 00:15 CST
 
 ## Current state
 
@@ -75,6 +75,11 @@ Last updated: 2026-03-10 22:05 CST
   - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22897972655>
   - Evidence: ImageBuilder staged `499` local `.apk` files.
   - New root cause: local `packages/packages.adb` was not generated before `make image`, so `apk` ignored the same-build package set and fell back to external feeds.
+- [x] Run `22905819677` narrowed the bootstrap failure further.
+  - Commit: `97afbf5`
+  - URL: <https://github.com/hotwa/openwrt-ipq60xx-buildkit/actions/runs/22905819677>
+  - Evidence: `make package_index` still failed to produce `packages/packages.adb`.
+  - Root cause: ImageBuilder `make package_index` itself uses an `apk` wrapper that already points at `packages/packages.adb`, so it cannot bootstrap a missing local repo index.
 
 ## Next actions if the next preload run succeeds
 

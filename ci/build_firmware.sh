@@ -257,12 +257,14 @@ stage_local_imagebuilder_repo() {
 
 prepare_local_imagebuilder_index() {
   local ib_root="$1"
+  local apk_bin="$ib_root/staging_dir/host/bin/apk"
 
   [ -d "$ib_root/packages" ] || fail "imagebuilder packages directory is missing"
+  [ -x "$apk_bin" ] || fail "imagebuilder apk tool is missing: $apk_bin"
   note "build same-build local package index"
   (
-    cd "$ib_root"
-    make package_index
+    cd "$ib_root/packages"
+    "$apk_bin" mkndx --allow-untrusted --output packages.adb ./*.apk >/dev/null
   )
   [ -f "$ib_root/packages/packages.adb" ] || fail "imagebuilder local packages.adb was not generated"
 }
