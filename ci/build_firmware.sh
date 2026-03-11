@@ -268,7 +268,7 @@ prepare_local_imagebuilder_index_dir() {
 stage_local_imagebuilder_repos() {
   local ib_root="$1"
   local target_repo
-  local repo_root repo_dir repo_name dest apk_bin copied_count
+  local repo_root repo_dir repo_name dest apk_bin copied_count repo_apk_count
 
   target_repo="$(resolve_target_package_repo)"
   repo_root="$ib_root/local"
@@ -280,6 +280,11 @@ stage_local_imagebuilder_repos() {
   copied_count=0
   while read -r repo_dir; do
     [ -n "$repo_dir" ] || continue
+    repo_apk_count="$(find "$repo_dir" -maxdepth 1 -type f -name '*.apk' | wc -l | tr -d ' ')"
+    if [ "${repo_apk_count:-0}" -eq 0 ]; then
+      note "skip empty same-build repo: $repo_dir"
+      continue
+    fi
     repo_name="$(repo_alias_for_dir "$repo_dir" "$target_repo")"
     dest="$repo_root/$repo_name"
     mkdir -p "$dest"
@@ -289,7 +294,7 @@ stage_local_imagebuilder_repos() {
       note "build same-build local package index: $dest"
       prepare_local_imagebuilder_index_dir "$dest" "$apk_bin"
     fi
-    copied_count="$((copied_count + $(find "$dest" -maxdepth 1 -type f -name '*.apk' | wc -l | tr -d ' ')))"
+    copied_count="$((copied_count + repo_apk_count))"
   done < <(collect_local_package_dirs "$target_repo")
 
   [ "$copied_count" -gt 0 ] || fail "no same-build apk packages staged into imagebuilder local repos"

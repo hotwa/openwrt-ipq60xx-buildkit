@@ -13,6 +13,7 @@ LOCK_FILE="$TMP_DIR/lock"
 mkdir -p "$WORKSPACE/wrt/bin/targets/qualcommax/ipq60xx/packages"
 mkdir -p "$WORKSPACE/wrt/bin/packages/aarch64_cortex-a53/base"
 mkdir -p "$WORKSPACE/wrt/bin/packages/aarch64_cortex-a53/luci"
+mkdir -p "$WORKSPACE/wrt/bin/packages/aarch64_cortex-a53/routing"
 mkdir -p "$IB_ROOT/staging_dir/host/bin"
 
 touch "$WORKSPACE/wrt/bin/targets/qualcommax/ipq60xx/packages/kernel-test.apk"
@@ -69,6 +70,11 @@ write_imagebuilder_repositories "$repo_file" "$IB_ROOT"
 grep -qxF 'local/target/packages.adb' "$repo_file"
 grep -qxF 'local/base/packages.adb' "$repo_file"
 grep -qxF 'local/luci/packages.adb' "$repo_file"
+
+if grep -q 'local/routing/packages.adb' "$repo_file"; then
+  printf 'unexpected empty routing repo in repositories\n' >&2
+  exit 1
+fi
 
 if grep -q 'downloads.immortalwrt.org' "$repo_file"; then
   printf 'unexpected remote feed in repositories\n' >&2
