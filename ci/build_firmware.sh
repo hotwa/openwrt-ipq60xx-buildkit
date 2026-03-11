@@ -310,8 +310,7 @@ write_imagebuilder_repositories() {
 
   while read -r repo_path; do
     [ -n "$repo_path" ] || continue
-    repo_path="${repo_path#"$ib_root"/}"
-    repo_path="${repo_path#/}"
+    repo_path="file://$repo_path"
     append_unique_repo "$repo_file" "$repo_path"
   done < <(find "$ib_root/local" -type f -name 'packages.adb' | sort)
 

@@ -67,17 +67,22 @@ repo_file="$TMP_DIR/repositories"
 stage_local_imagebuilder_repos "$IB_ROOT"
 write_imagebuilder_repositories "$repo_file" "$IB_ROOT"
 
-grep -qxF 'local/target/packages.adb' "$repo_file"
-grep -qxF 'local/base/packages.adb' "$repo_file"
-grep -qxF 'local/luci/packages.adb' "$repo_file"
+grep -qxF "file://$IB_ROOT/local/target/packages.adb" "$repo_file"
+grep -qxF "file://$IB_ROOT/local/base/packages.adb" "$repo_file"
+grep -qxF "file://$IB_ROOT/local/luci/packages.adb" "$repo_file"
 
-if grep -q 'local/routing/packages.adb' "$repo_file"; then
+if grep -q 'file://.*/local/routing/packages.adb' "$repo_file"; then
   printf 'unexpected empty routing repo in repositories\n' >&2
   exit 1
 fi
 
 if grep -q 'downloads.immortalwrt.org' "$repo_file"; then
   printf 'unexpected remote feed in repositories\n' >&2
+  exit 1
+fi
+
+if grep -q '^local/' "$repo_file"; then
+  printf 'unexpected relative repo entry in repositories\n' >&2
   exit 1
 fi
 
