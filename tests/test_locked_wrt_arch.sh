@@ -47,6 +47,7 @@ grep() {
 prepare_env_vars
 
 [ "$WRT_TARGET" = "QUALCOMMAX" ]
-[ "$WRT_ARCH" = "aarch64_cortex-a53" ]
+[ "$WRT_ARCH" = "qualcommax_ipq60xx" ]
+[ "$PACKAGE_ARCH" = "aarch64_cortex-a53" ]
 
 printf 'locked wrt arch test passed\n'

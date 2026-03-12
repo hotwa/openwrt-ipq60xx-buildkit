@@ -144,6 +144,21 @@ If a future agent changes this behavior, they must update the workflows and
 docs together. Do not silently switch downstream consumption from artifact to
 Release.
 
+## Variable Semantics
+
+Do not conflate the repository lock's package architecture with the upstream CI
+base script variable of the same name.
+
+- `locks/combined-baseline.lock` `WRT_ARCH`
+  - package architecture for baseline identity
+  - current value: `aarch64_cortex-a53`
+- upstream `davidtall/OpenWRT-CI` shell flow `WRT_ARCH`
+  - target/subtarget token consumed by `Scripts/function.sh`
+  - current IPQ60XX shape: `qualcommax_ipq60xx`
+
+This repository keeps those semantics separate internally. Future agents should
+not reuse the lock's package arch directly as the upstream shell variable.
+
 ## Permissions
 
 Same-repo automation does not require a separate PAT today.

@@ -59,6 +59,14 @@ Last updated: 2026-03-12 18:40 CST
 - [x] If a future agent changes token model or moves assets cross-repo, update
   this checklist and `README.md` in the same change.
 
+## Variable rule
+
+- [x] Lock `WRT_ARCH` means package arch for baseline identity.
+- [x] Upstream `davidtall/OpenWRT-CI` scripts use `WRT_ARCH` as the
+  target/subtarget token such as `qualcommax_ipq60xx`.
+- [x] Keep those two meanings separate in local scripts, or prebuild will read
+  the wrong `target/linux/...` path during `generate_config`.
+
 ## Current state
 
 - [x] Combined baseline lock created and pushed.

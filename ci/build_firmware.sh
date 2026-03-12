@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 require_cmd git bash find grep sed awk xargs tar sort
 
 source_lock
-LOCK_WRT_ARCH="${WRT_ARCH:-}"
+LOCK_PACKAGE_ARCH="${WRT_ARCH:-}"
 
 PROFILE="${PROFILE:-}"
 BUILD_FIRMWARE_LIB_ONLY="${BUILD_FIRMWARE_LIB_ONLY:-false}"
@@ -25,6 +25,7 @@ TEST_ONLY="${TEST_ONLY:-false}"
 ASSEMBLE_IMAGEBUILDER="${ASSEMBLE_IMAGEBUILDER:-false}"
 USE_PREBUILT_STACK="${USE_PREBUILT_STACK:-false}"
 PREBUILT_STACK_DIR="${PREBUILT_STACK_DIR:-}"
+PACKAGE_ARCH="${PACKAGE_ARCH:-$LOCK_PACKAGE_ARCH}"
 
 WRT_THEME="${WRT_THEME:-argon}"
 WRT_NAME="${WRT_NAME:-DAE-WRT}"
@@ -97,16 +98,19 @@ prepare_env_vars() {
   export WRT_DATE
   export WRT_TARGET
   export WRT_ARCH
+  export PACKAGE_ARCH
 
   WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
   WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$WORKSPACE/Config/$PROFILE.txt" | tr '[:lower:]' '[:upper:]')"
   detected_wrt_arch="$(detect_profile_wrt_arch "$WORKSPACE/Config/$PROFILE.txt")"
-  # CI base profile files encode target/subtarget in DEVICE selectors, not the
-  # final package architecture. Prefer the locked baseline arch when provided.
-  WRT_ARCH="${LOCK_WRT_ARCH:-$detected_wrt_arch}"
+  # Upstream scripts use WRT_ARCH as the target/subtarget token such as
+  # "qualcommax_ipq60xx", while this repository uses the lock's WRT_ARCH as the
+  # package architecture for baseline identity. Keep them separate.
+  WRT_ARCH="$detected_wrt_arch"
 
   [ -n "$WRT_TARGET" ] || fail "failed to resolve WRT_TARGET from $PROFILE"
   [ -n "$WRT_ARCH" ] || fail "failed to resolve WRT_ARCH from $PROFILE"
+  [ -n "$PACKAGE_ARCH" ] || fail "failed to resolve PACKAGE_ARCH from lock"
 }
 
 normalize_scripts() {
@@ -214,7 +218,7 @@ validate_prebuilt_stack_dir() {
   [ "$USE_PREBUILT_STACK" = "true" ] || return 0
   [ "$TEST_ONLY" = "true" ] && return 0
 
-  expected_artifact="$(baseline_artifact_name "$WRT_ARCH")"
+  expected_artifact="$(baseline_artifact_name "$PACKAGE_ARCH")"
   [ -n "$PREBUILT_STACK_DIR" ] || \
     fail "PREBUILT_STACK_DIR is required when USE_PREBUILT_STACK=true (expected artifact: $expected_artifact)"
   [ -d "$PREBUILT_STACK_DIR" ] || \

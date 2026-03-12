@@ -26,7 +26,7 @@ init_host_environment
 normalize_scripts
 run_prebuild_package_stack_flow
 
-artifact_name="$(baseline_artifact_name "$WRT_ARCH")"
+artifact_name="$(baseline_artifact_name "$PACKAGE_ARCH")"
 artifact_dir="$PREBUILT_DIST_DIR/$artifact_name"
 apk_bin="$WORKSPACE/wrt/staging_dir/host/bin/apk"
 
@@ -36,13 +36,14 @@ stage_source_build_repos_to_root "$artifact_dir" "$apk_bin"
 [ -x "$apk_bin" ] || fail "host apk tool missing after package-stack build: $apk_bin"
 
 cat > "$artifact_dir/prebuilt-stack.env" <<EOF
-BASELINE_KEY=$(compute_baseline_key "$WRT_ARCH")
+BASELINE_KEY=$(compute_baseline_key "$PACKAGE_ARCH")
 BASELINE_ARTIFACT_NAME=$artifact_name
-BASELINE_RELEASE_TAG=$(baseline_release_tag "$WRT_ARCH")
-BASELINE_RELEASE_ASSET=$(baseline_release_asset_name "$WRT_ARCH")
+BASELINE_RELEASE_TAG=$(baseline_release_tag "$PACKAGE_ARCH")
+BASELINE_RELEASE_ASSET=$(baseline_release_asset_name "$PACKAGE_ARCH")
 PROFILE=$PROFILE
 TARGET=$TARGET
-WRT_ARCH=$WRT_ARCH
+WRT_ARCH=$PACKAGE_ARCH
+UPSTREAM_WRT_ARCH=$WRT_ARCH
 CI_BASE_COMMIT=$CI_BASE_COMMIT
 WRT_COMMIT=$WRT_COMMIT
 SOURCE_LUCI_APP_PODMAN_REF=$SOURCE_LUCI_APP_PODMAN_REF
