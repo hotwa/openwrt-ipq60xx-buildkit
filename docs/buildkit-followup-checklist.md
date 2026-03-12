@@ -10,6 +10,8 @@ Last updated: 2026-03-12 18:40 CST
   - Output: local repo artifact with `.apk` files and `packages.adb`
   - Output mirror: baseline-keyed GitHub Release asset with the same repo
     snapshot
+  - Build order: `make download` -> `make tools/install` ->
+    `make toolchain/install` -> `make package/compile`
 - [x] Profile firmware workflow kept as matrix:
   - `IPQ60XX-NOWIFI`
   - `IPQ60XX-WIFI`

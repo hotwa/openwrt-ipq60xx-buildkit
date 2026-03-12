@@ -114,6 +114,9 @@ The firmware flow now runs in two stages:
    - builds only the shared `tailscale + luci-app-podman + nfs*` package stack
      once per baseline key
    - does not build full firmware images
+   - still prepares OpenWrt host tools and toolchain explicitly before
+     `make package/compile`, because package-only prebuilds do not get those
+     prerequisites for free
    - uploads a local repo artifact containing `.apk` files and `packages.adb`
    - mirrors the same repo snapshot to a baseline-keyed GitHub Release asset
    - targets `qualcommax/ipq60xx + aarch64_cortex-a53`, not individual profiles

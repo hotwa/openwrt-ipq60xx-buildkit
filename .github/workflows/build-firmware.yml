@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout buildkit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
@@ -50,7 +50,7 @@ jobs:
       - name: Resolve prebuilt artifact
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_only) }}
         id: prebuilt
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           BASELINE_ARTIFACT_NAME: ${{ env.BASELINE_ARTIFACT_NAME }}
           TRIGGER_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}

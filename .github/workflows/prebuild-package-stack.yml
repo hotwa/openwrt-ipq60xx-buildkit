@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout buildkit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Export baseline env
         run: |

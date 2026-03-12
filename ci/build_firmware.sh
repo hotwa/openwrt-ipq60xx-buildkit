@@ -364,6 +364,15 @@ run_build_flow() {
   )
 }
 
+prepare_package_stack_build_prerequisites() {
+  note "prepare package-stack build prerequisites"
+  (
+    cd "$WORKSPACE/wrt"
+    make tools/install -j"$JOBS" || make tools/install -j1 V=s
+    make toolchain/install -j"$JOBS" || make toolchain/install -j1 V=s
+  )
+}
+
 run_prebuild_package_stack_flow() {
   note "update feeds"
   (
@@ -400,6 +409,8 @@ run_prebuild_package_stack_flow() {
     cd "$WORKSPACE/wrt"
     make download -j"$JOBS"
   )
+
+  prepare_package_stack_build_prerequisites
 
   note "compile package-stack only"
   (
