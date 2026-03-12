@@ -101,13 +101,12 @@ prepare_env_vars() {
   WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
   WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$WORKSPACE/Config/$PROFILE.txt" | tr '[:lower:]' '[:upper:]')"
   detected_wrt_arch="$(detect_profile_wrt_arch "$WORKSPACE/Config/$PROFILE.txt")"
-  WRT_ARCH="$detected_wrt_arch"
+  # CI base profile files encode target/subtarget in DEVICE selectors, not the
+  # final package architecture. Prefer the locked baseline arch when provided.
+  WRT_ARCH="${LOCK_WRT_ARCH:-$detected_wrt_arch}"
 
   [ -n "$WRT_TARGET" ] || fail "failed to resolve WRT_TARGET from $PROFILE"
   [ -n "$WRT_ARCH" ] || fail "failed to resolve WRT_ARCH from $PROFILE"
-  if [ -n "$LOCK_WRT_ARCH" ] && [ "$LOCK_WRT_ARCH" != "$WRT_ARCH" ]; then
-    fail "locked WRT_ARCH=$LOCK_WRT_ARCH does not match profile-resolved arch $WRT_ARCH"
-  fi
 }
 
 normalize_scripts() {
