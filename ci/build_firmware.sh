@@ -119,13 +119,19 @@ apply_nfs_kernel_server_v4_hotfix() {
 
   [ -f "$nfs_makefile" ] || return 0
   grep -q '/utils/nfsdcld/nfsdcld' "$nfs_makefile" || return 0
-  grep -q '\[ -x .*/utils/nfsdcld/nfsdcld' "$nfs_makefile" && return 0
+  grep -q '/ipkg-install/usr/sbin/rpc.idmapd' "$nfs_makefile" || return 0
+  grep -q '\[ -x .*/utils/nfsdcld/nfsdcld' "$nfs_makefile" && \
+    grep -q '\[ -x .*/ipkg-install/usr/sbin/rpc.idmapd' "$nfs_makefile" && return 0
 
-  note "apply nfs-kernel-server-v4 nfsdcld install guard"
+  note "apply nfs-kernel-server-v4 install guards"
   awk '
     /^[[:space:]]*\$\(INSTALL_BIN\) \$\(PKG_BUILD_DIR\)\/utils\/nfsdcld\/nfsdcld \$\(1\)\/usr\/sbin\// {
       sub(/\$\(INSTALL_BIN\) \$\(PKG_BUILD_DIR\)\/utils\/nfsdcld\/nfsdcld \$\(1\)\/usr\/sbin\//,
           "[ -x $(PKG_BUILD_DIR)/utils/nfsdcld/nfsdcld ] \\&\\& $(INSTALL_BIN) $(PKG_BUILD_DIR)/utils/nfsdcld/nfsdcld $(1)/usr/sbin/ || true")
+    }
+    /^[[:space:]]*\$\(INSTALL_BIN\) \$\(PKG_INSTALL_DIR\)\/usr\/sbin\/rpc\.idmapd \$\(1\)\/usr\/sbin\// {
+      sub(/\$\(INSTALL_BIN\) \$\(PKG_INSTALL_DIR\)\/usr\/sbin\/rpc\.idmapd \$\(1\)\/usr\/sbin\//,
+          "[ -x $(PKG_INSTALL_DIR)/usr/sbin/rpc.idmapd ] \\&\\& $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/rpc.idmapd $(1)/usr/sbin/ || true")
     }
     { print }
   ' "$nfs_makefile" > "$nfs_makefile.tmp"
