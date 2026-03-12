@@ -114,6 +114,24 @@ prepare_overlay_packages() {
   sed -i 's/+podman//g' "$podman_makefile"
 }
 
+apply_nfs_kernel_server_v4_hotfix() {
+  local nfs_makefile="$WORKSPACE/wrt/feeds/packages/net/nfs-kernel-server/Makefile"
+
+  [ -f "$nfs_makefile" ] || return 0
+  grep -q '/utils/nfsdcld/nfsdcld' "$nfs_makefile" || return 0
+  grep -q '\[ -x .*/utils/nfsdcld/nfsdcld' "$nfs_makefile" && return 0
+
+  note "apply nfs-kernel-server-v4 nfsdcld install guard"
+  awk '
+    /^[[:space:]]*\$\(INSTALL_BIN\) \$\(PKG_BUILD_DIR\)\/utils\/nfsdcld\/nfsdcld \$\(1\)\/usr\/sbin\// {
+      sub(/\$\(INSTALL_BIN\) \$\(PKG_BUILD_DIR\)\/utils\/nfsdcld\/nfsdcld \$\(1\)\/usr\/sbin\//,
+          "[ -x $(PKG_BUILD_DIR)/utils/nfsdcld/nfsdcld ] \\&\\& $(INSTALL_BIN) $(PKG_BUILD_DIR)/utils/nfsdcld/nfsdcld $(1)/usr/sbin/ || true")
+    }
+    { print }
+  ' "$nfs_makefile" > "$nfs_makefile.tmp"
+  mv "$nfs_makefile.tmp" "$nfs_makefile"
+}
+
 disable_excluded_packages() {
   local config_file="$1"
   local pkg
@@ -175,6 +193,7 @@ run_build_flow() {
     cd "$WORKSPACE/wrt"
     ./scripts/feeds update -a
     ./scripts/feeds install -a
+    apply_nfs_kernel_server_v4_hotfix
   )
 
   note "apply custom packages"
