@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 require_cmd git bash find grep sed awk xargs tar sort
 
 source_lock
+LOCK_WRT_ARCH="${WRT_ARCH:-}"
 
 PROFILE="${PROFILE:-}"
 BUILD_FIRMWARE_LIB_ONLY="${BUILD_FIRMWARE_LIB_ONLY:-false}"
@@ -22,6 +23,8 @@ OUT_DIR="${OUT_DIR:-$ROOT_DIR/dist/out/$PROFILE}"
 JOBS="${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
 TEST_ONLY="${TEST_ONLY:-false}"
 ASSEMBLE_IMAGEBUILDER="${ASSEMBLE_IMAGEBUILDER:-false}"
+USE_PREBUILT_STACK="${USE_PREBUILT_STACK:-false}"
+PREBUILT_STACK_DIR="${PREBUILT_STACK_DIR:-}"
 
 WRT_THEME="${WRT_THEME:-argon}"
 WRT_NAME="${WRT_NAME:-DAE-WRT}"
@@ -34,6 +37,7 @@ CI_NAME="${CI_NAME:-buildkit-firmware}"
 IMAGEBUILDER_DIR="$WORKSPACE/.imagebuilder"
 IMAGEBUILDER_OUTPUT_DIR="$OUT_DIR/imagebuilder"
 IMAGEBUILDER_ARCHIVE=""
+IMAGEBUILDER_ROOT=""
 
 fetch_repo_commit() {
   local repo="$1"
@@ -65,7 +69,15 @@ init_host_environment() {
   sudo bash "$WORKSPACE/Scripts/init_build_environment.sh"
 }
 
+detect_profile_wrt_arch() {
+  local config_file="$1"
+
+  sed -n 's/.*_DEVICE_\(.*\)_DEVICE_.*/\1/p' "$config_file" | head -n 1
+}
+
 prepare_env_vars() {
+  local detected_wrt_arch
+
   export GITHUB_WORKSPACE="$WORKSPACE"
   export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-hotwa/openwrt-ipq60xx-buildkit}"
   export WRT_DIR="wrt"
@@ -88,10 +100,14 @@ prepare_env_vars() {
 
   WRT_DATE="$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")"
   WRT_TARGET="$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' "$WORKSPACE/Config/$PROFILE.txt" | tr '[:lower:]' '[:upper:]')"
-  WRT_ARCH="$(sed -n 's/.*_DEVICE_\(.*\)_DEVICE_.*/\1/p' "$WORKSPACE/Config/$PROFILE.txt" | head -n 1)"
+  detected_wrt_arch="$(detect_profile_wrt_arch "$WORKSPACE/Config/$PROFILE.txt")"
+  WRT_ARCH="$detected_wrt_arch"
 
   [ -n "$WRT_TARGET" ] || fail "failed to resolve WRT_TARGET from $PROFILE"
   [ -n "$WRT_ARCH" ] || fail "failed to resolve WRT_ARCH from $PROFILE"
+  if [ -n "$LOCK_WRT_ARCH" ] && [ "$LOCK_WRT_ARCH" != "$WRT_ARCH" ]; then
+    fail "locked WRT_ARCH=$LOCK_WRT_ARCH does not match profile-resolved arch $WRT_ARCH"
+  fi
 }
 
 normalize_scripts() {
@@ -112,6 +128,70 @@ prepare_overlay_packages() {
   [ -f "$podman_makefile" ] || fail "missing luci-app-podman source overlay"
   # Build only the lightweight LuCI frontend here; podman runtime comes from ImageBuilder.
   sed -i 's/+podman//g' "$podman_makefile"
+}
+
+set_package_config_state() {
+  local config_file="$1"
+  local pkg="$2"
+  local state="$3"
+
+  sed -i \
+    -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
+    -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
+    "$config_file"
+
+  case "$state" in
+    unset)
+      printf '# CONFIG_PACKAGE_%s is not set\n' "$pkg" >> "$config_file"
+      ;;
+    y|m)
+      printf 'CONFIG_PACKAGE_%s=%s\n' "$pkg" "$state" >> "$config_file"
+      ;;
+    *)
+      fail "unsupported package state: $state"
+      ;;
+  esac
+}
+
+package_in_list() {
+  local pkg="$1"
+  local package_list="$2"
+
+  printf '%s\n' "$package_list" | tr ' ' '\n' | awk 'NF' | grep -qxF "$pkg"
+}
+
+prebuilt_stack_package_list() {
+  printf '%s\n%s\n' "$IMAGEBUILDER_ALL_PACKAGES" "$SOURCE_OVERLAY_PACKAGES" | \
+    tr ' ' '\n' | awk 'NF && !seen[$0]++'
+}
+
+package_built_from_prebuilt_stack() {
+  local pkg="$1"
+
+  prebuilt_stack_package_list | grep -qxF "$pkg"
+}
+
+disable_prebuilt_stack_packages() {
+  local config_file="$1"
+  local pkg
+
+  while read -r pkg; do
+    [ -n "$pkg" ] || continue
+    set_package_config_state "$config_file" "$pkg" unset
+  done < <(prebuilt_stack_package_list)
+}
+
+validate_prebuilt_stack_dir() {
+  local expected_artifact
+
+  [ "$USE_PREBUILT_STACK" = "true" ] || return 0
+  [ "$TEST_ONLY" = "true" ] && return 0
+
+  expected_artifact="$(baseline_artifact_name "$WRT_ARCH")"
+  [ -n "$PREBUILT_STACK_DIR" ] || \
+    fail "PREBUILT_STACK_DIR is required when USE_PREBUILT_STACK=true (expected artifact: $expected_artifact)"
+  [ -d "$PREBUILT_STACK_DIR" ] || \
+    fail "prebuilt stack directory not found: $PREBUILT_STACK_DIR (expected artifact: $expected_artifact)"
 }
 
 apply_nfs_kernel_server_v4_hotfix() {
@@ -143,11 +223,7 @@ disable_excluded_packages() {
   local pkg
 
   for pkg in $DAVIDTALL_EXCLUDED_PACKAGES; do
-    sed -i \
-      -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
-      -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
-      "$config_file"
-    printf '# CONFIG_PACKAGE_%s is not set\n' "$pkg" >> "$config_file"
+    set_package_config_state "$config_file" "$pkg" unset
   done
 }
 
@@ -157,11 +233,10 @@ enable_source_overlay_packages() {
 
   for pkg in $SOURCE_OVERLAY_PACKAGES; do
     [ -n "$pkg" ] || continue
-    sed -i \
-      -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
-      -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
-      "$config_file"
-    printf 'CONFIG_PACKAGE_%s=y\n' "$pkg" >> "$config_file"
+    if [ "$USE_PREBUILT_STACK" = "true" ] && package_built_from_prebuilt_stack "$pkg"; then
+      continue
+    fi
+    set_package_config_state "$config_file" "$pkg" y
   done
 }
 
@@ -182,14 +257,13 @@ enable_imagebuilder_source_build_packages() {
     if package_selected_in_config "$config_file" "$pkg" "y"; then
       continue
     fi
+    if [ "$USE_PREBUILT_STACK" = "true" ] && package_built_from_prebuilt_stack "$pkg"; then
+      continue
+    fi
     if printf '%s\n' "$SOURCE_OVERLAY_PACKAGES" | tr ' ' '\n' | grep -qxF "$pkg"; then
       continue
     fi
-    sed -i \
-      -e "/^CONFIG_PACKAGE_${pkg}=.*/d" \
-      -e "/^# CONFIG_PACKAGE_${pkg} is not set$/d" \
-      "$config_file"
-    printf 'CONFIG_PACKAGE_%s=m\n' "$pkg" >> "$config_file"
+    set_package_config_state "$config_file" "$pkg" m
   done
 }
 
@@ -209,8 +283,10 @@ run_build_flow() {
     "$WORKSPACE/Scripts/Handles.sh"
   )
 
-  note "prepare overlay packages"
-  prepare_overlay_packages
+  if [ "$USE_PREBUILT_STACK" != "true" ]; then
+    note "prepare overlay packages"
+    prepare_overlay_packages
+  fi
 
   note "generate config"
   (
@@ -218,14 +294,24 @@ run_build_flow() {
     . "$WORKSPACE/Scripts/function.sh"
     cd "$WORKSPACE/wrt"
     generate_config
-    grep -qxF 'CONFIG_PACKAGE_luci-app-podman=y' .config || printf '%s\n' 'CONFIG_PACKAGE_luci-app-podman=y' >> .config
+    if [ "$USE_PREBUILT_STACK" != "true" ]; then
+      grep -qxF 'CONFIG_PACKAGE_luci-app-podman=y' .config || printf '%s\n' 'CONFIG_PACKAGE_luci-app-podman=y' >> .config
+    else
+      disable_prebuilt_stack_packages .config
+    fi
     disable_excluded_packages .config
     enable_source_overlay_packages .config
     enable_imagebuilder_source_build_packages .config
     "$WORKSPACE/Scripts/Settings.sh"
+    if [ "$USE_PREBUILT_STACK" = "true" ]; then
+      disable_prebuilt_stack_packages .config
+    fi
     disable_excluded_packages .config
     enable_source_overlay_packages .config
     enable_imagebuilder_source_build_packages .config
+    if [ "$USE_PREBUILT_STACK" = "true" ]; then
+      disable_prebuilt_stack_packages .config
+    fi
     make defconfig -j"$JOBS"
   )
 
@@ -320,6 +406,41 @@ prepare_local_imagebuilder_index_dir() {
   [ -f "$repo_dir/packages.adb" ] || fail "imagebuilder local packages.adb was not generated: $repo_dir"
 }
 
+stage_prebuilt_imagebuilder_repos() {
+  local ib_root="$1"
+  local repo_root repo_dir repo_name dest apk_bin copied_count repo_apk_count
+
+  [ -d "$PREBUILT_STACK_DIR" ] || fail "prebuilt stack directory is missing: $PREBUILT_STACK_DIR"
+  repo_root="$ib_root/local"
+  apk_bin="$ib_root/staging_dir/host/bin/apk"
+
+  rm -rf "$repo_root"
+  mkdir -p "$repo_root"
+
+  copied_count=0
+  while read -r repo_dir; do
+    [ -n "$repo_dir" ] || continue
+    repo_apk_count="$(find "$repo_dir" -maxdepth 1 -type f -name '*.apk' | wc -l | tr -d ' ')"
+    if [ "${repo_apk_count:-0}" -eq 0 ]; then
+      note "skip empty prebuilt repo: $repo_dir"
+      continue
+    fi
+    repo_name="$(basename "$repo_dir")"
+    dest="$repo_root/$repo_name"
+    mkdir -p "$dest"
+    note "stage prebuilt packages from: $repo_dir -> $dest"
+    find "$repo_dir" -maxdepth 1 -type f \( -name '*.apk' -o -name 'packages.adb' \) -exec cp -f {} "$dest/" \;
+    if ! [ -f "$dest/packages.adb" ]; then
+      note "build prebuilt local package index: $dest"
+      prepare_local_imagebuilder_index_dir "$dest" "$apk_bin"
+    fi
+    copied_count="$((copied_count + repo_apk_count))"
+  done < <(find "$PREBUILT_STACK_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+
+  [ "$copied_count" -gt 0 ] || fail "no prebuilt apk packages staged into imagebuilder local repos"
+  note "staged prebuilt apk count: $copied_count"
+}
+
 stage_local_imagebuilder_repos() {
   local ib_root="$1"
   local target_repo
@@ -376,6 +497,17 @@ load_profile_devices() {
   sed -n 's/^CONFIG_TARGET_DEVICE_.*_DEVICE_\(.*\)=y$/\1/p' "$WORKSPACE/Config/$PROFILE.txt" | sort -u
 }
 
+prepare_imagebuilder_workspace() {
+  local archive="$1"
+  local dest_root="$2"
+
+  rm -rf "$dest_root"
+  mkdir -p "$dest_root"
+  tar --zstd -xf "$archive" -C "$dest_root"
+  IMAGEBUILDER_ROOT="$(find "$dest_root" -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)"
+  [ -n "$IMAGEBUILDER_ROOT" ] || fail "failed to unpack imagebuilder archive"
+}
+
 assemble_imagebuilder_images() {
   local archive ib_root repo_file device bin_dir local_repo
   local preload_packages="$IMAGEBUILDER_ALL_PACKAGES"
@@ -385,14 +517,16 @@ assemble_imagebuilder_images() {
   [ -n "$archive" ] || fail "imagebuilder archive path is empty"
 
   note "prepare imagebuilder workspace"
-  rm -rf "$IMAGEBUILDER_DIR"
-  mkdir -p "$IMAGEBUILDER_DIR"
-  tar --zstd -xf "$archive" -C "$IMAGEBUILDER_DIR"
-  ib_root="$(find "$IMAGEBUILDER_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1 || true)"
-  [ -n "$ib_root" ] || fail "failed to unpack imagebuilder archive"
+  prepare_imagebuilder_workspace "$archive" "$IMAGEBUILDER_DIR"
+  ib_root="$IMAGEBUILDER_ROOT"
 
-  note "stage same-build local repositories"
-  stage_local_imagebuilder_repos "$ib_root"
+  if [ "$USE_PREBUILT_STACK" = "true" ]; then
+    note "stage downloaded prebuilt repositories"
+    stage_prebuilt_imagebuilder_repos "$ib_root"
+  else
+    note "stage same-build local repositories"
+    stage_local_imagebuilder_repos "$ib_root"
+  fi
 
   repo_file="$ib_root/repositories"
   write_imagebuilder_repositories "$repo_file" "$ib_root"
@@ -437,6 +571,7 @@ export_artifacts() {
 main() {
   prepare_workspace
   prepare_env_vars
+  validate_prebuilt_stack_dir
   init_host_environment
   normalize_scripts
   run_build_flow

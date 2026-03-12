@@ -1,0 +1,66 @@
+name: prebuild-package-stack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/prebuild-package-stack.yml
+      - ci/build_firmware.sh
+      - ci/compute_baseline_key.sh
+      - ci/lib.sh
+      - ci/prebuild_package_stack.sh
+      - locks/combined-baseline.lock
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prebuild:
+    name: qualcommax/ipq60xx + aarch64_cortex-a53
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+
+    steps:
+      - name: Checkout buildkit
+        uses: actions/checkout@v4
+
+      - name: Export baseline env
+        run: |
+          chmod +x ./ci/*.sh
+          ./ci/compute_baseline_key.sh >> "$GITHUB_ENV"
+
+      - name: Free disk space
+        uses: endersonmenezes/free-disk-space@v2
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/share/chromium /usr/local/share/powershell"
+          testing: false
+
+      - name: Install bootstrap tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt -yqq update
+          sudo -E apt -yqq install bc dos2unix git jq zstd
+
+      - name: Prebuild shared package stack
+        env:
+          PROFILE: IPQ60XX-NOWIFI
+        run: |
+          chmod +x ./ci/*.sh
+          ./ci/prebuild_package_stack.sh
+
+      - name: Upload prebuilt artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT_NAME }}
+          path: dist/prebuilt/${{ env.BASELINE_ARTIFACT_NAME }}
+          if-no-files-found: error

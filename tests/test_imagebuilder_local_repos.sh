@@ -86,4 +86,23 @@ if grep -q '^local/' "$repo_file"; then
   exit 1
 fi
 
+PREBUILT_STACK_DIR="$TMP_DIR/prebuilt"
+PREBUILT_IB_ROOT="$TMP_DIR/prebuilt-imagebuilder"
+mkdir -p "$PREBUILT_STACK_DIR/target" "$PREBUILT_STACK_DIR/custom" "$PREBUILT_IB_ROOT/staging_dir/host/bin"
+touch "$PREBUILT_STACK_DIR/target/prebuilt-kmod.apk"
+touch "$PREBUILT_STACK_DIR/custom/luci-app-podman.apk"
+cp "$IB_ROOT/staging_dir/host/bin/apk" "$PREBUILT_IB_ROOT/staging_dir/host/bin/apk"
+
+export USE_PREBUILT_STACK=true
+export PREBUILT_STACK_DIR
+
+prebuilt_repo_file="$TMP_DIR/prebuilt-repositories"
+: > "$prebuilt_repo_file"
+
+stage_prebuilt_imagebuilder_repos "$PREBUILT_IB_ROOT"
+write_imagebuilder_repositories "$prebuilt_repo_file" "$PREBUILT_IB_ROOT"
+
+grep -qxF "file://$PREBUILT_IB_ROOT/local/custom/packages.adb" "$prebuilt_repo_file"
+grep -qxF "file://$PREBUILT_IB_ROOT/local/target/packages.adb" "$prebuilt_repo_file"
+
 printf 'local imagebuilder repository test passed\n'

@@ -1,6 +1,44 @@
 # Buildkit Follow-up Checklist
 
-Last updated: 2026-03-11 00:15 CST
+Last updated: 2026-03-12 18:40 CST
+
+## Two-stage CI architecture
+
+- [x] Shared prebuild workflow added: `.github/workflows/prebuild-package-stack.yml`
+  - Scope: one `qualcommax/ipq60xx + aarch64_cortex-a53` APK repository per
+    baseline key
+  - Output: local repo artifact with `.apk` files and `packages.adb`
+- [x] Profile firmware workflow kept as matrix:
+  - `IPQ60XX-NOWIFI`
+  - `IPQ60XX-WIFI`
+- [x] Baseline key contract is shared between workflows:
+  - `locks/combined-baseline.lock` content hash
+  - `CI_BASE_COMMIT`
+  - `WRT_COMMIT`
+  - `SOURCE_LUCI_APP_PODMAN_REF`
+  - `TARGET`
+  - `WRT_ARCH`
+- [x] `build-firmware` now depends on `prebuild-package-stack` for the shared
+  `tailscale + luci-app-podman + nfs*` repo.
+- [x] Missing prebuilt artifacts are an intentional fail-fast condition.
+
+## Manual operator steps
+
+- [x] Change the lock or package-stack build logic.
+- [x] Run `prebuild-package-stack` first.
+- [x] Wait for artifact `prebuilt-stack-<baseline-key>` to upload.
+- [x] Run or push `build-firmware`.
+- [x] If `build-firmware` fails before bootstrap with a missing prebuilt
+  artifact message, re-run `prebuild-package-stack` for the same baseline.
+
+## Fail-fast rule
+
+- [x] `build-firmware` resolves the shared baseline key before freeing disk or
+  installing bootstrap packages.
+- [x] If no matching artifact exists, the workflow stops immediately and tells
+  operators to run `prebuild-package-stack` first.
+- [x] `TEST_ONLY=true` skips the artifact dependency because that mode does not
+  compile or assemble the preload image path.
 
 ## Current state
 

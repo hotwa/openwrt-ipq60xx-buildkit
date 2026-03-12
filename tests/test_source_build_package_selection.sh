@@ -27,6 +27,17 @@ CONFIG_PACKAGE_zerotier=y
 # CONFIG_PACKAGE_nfs-kernel-server is not set
 EOF
 
+PREBUILT_CONFIG_FILE="$TMP_DIR/.config.prebuilt"
+cat > "$PREBUILT_CONFIG_FILE" <<'EOF'
+CONFIG_PACKAGE_zerotier=y
+CONFIG_PACKAGE_luci-app-podman=y
+CONFIG_PACKAGE_podman=m
+CONFIG_PACKAGE_tailscale=m
+CONFIG_PACKAGE_nfs-kernel-server=m
+CONFIG_PACKAGE_kmod-fs-nfs=y
+CONFIG_PACKAGE_nss-firmware-ipq60xx=y
+EOF
+
 export LOCK_FILE
 export PROFILE="IPQ60XX-NOWIFI"
 export WORK_ROOT="$TMP_DIR/work"
@@ -70,5 +81,17 @@ if grep -q '^CONFIG_PACKAGE_kmod-fs-nfs=m$' "$CONFIG_FILE"; then
   printf 'kernel overlay package should stay built-in, not module-only\n' >&2
   exit 1
 fi
+
+export USE_PREBUILT_STACK=true
+enable_source_overlay_packages "$PREBUILT_CONFIG_FILE"
+enable_imagebuilder_source_build_packages "$PREBUILT_CONFIG_FILE"
+disable_prebuilt_stack_packages "$PREBUILT_CONFIG_FILE"
+
+grep -qxF '# CONFIG_PACKAGE_luci-app-podman is not set' "$PREBUILT_CONFIG_FILE"
+grep -qxF '# CONFIG_PACKAGE_podman is not set' "$PREBUILT_CONFIG_FILE"
+grep -qxF '# CONFIG_PACKAGE_tailscale is not set' "$PREBUILT_CONFIG_FILE"
+grep -qxF '# CONFIG_PACKAGE_nfs-kernel-server is not set' "$PREBUILT_CONFIG_FILE"
+grep -qxF '# CONFIG_PACKAGE_kmod-fs-nfs is not set' "$PREBUILT_CONFIG_FILE"
+grep -qxF '# CONFIG_PACKAGE_nss-firmware-ipq60xx is not set' "$PREBUILT_CONFIG_FILE"
 
 printf 'source build package selection test passed\n'

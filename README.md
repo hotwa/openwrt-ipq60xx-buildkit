@@ -45,8 +45,11 @@ build for `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`.
   - emits shell or GitHub Actions style environment variables for consumers
 - `.github/workflows/refresh-lock.yml`
   - scheduled and manual lock refresh workflow
+- `.github/workflows/prebuild-package-stack.yml`
+  - shared package-stack prebuild keyed by target/arch baseline
 - `.github/workflows/build-firmware.yml`
-  - first-pass firmware build workflow for the two IPQ60XX profiles
+  - firmware build workflow for the two IPQ60XX profiles that consumes the
+    shared prebuilt stack
 - `ci/build_firmware.sh`
   - clones the locked CI base and locked WRT source into a temporary workspace
     and runs the upstream shell build flow
@@ -103,26 +106,26 @@ The lock file exports explicit ImageBuilder package groups for:
 Downstream workflows can consume these groups directly instead of rebuilding the
 same package selection logic.
 
-## Firmware workflow
+## Two-stage CI
 
-`build-firmware.yml` is intentionally narrower than the long-term target:
+The firmware flow now runs in two stages:
 
-- it validates that the combined baseline can perform a real source build
-- it reuses `davidtall/OpenWRT-CI` shell scripts and config from the locked
-  commit
-- it compiles `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`
-- it uploads `dist/out/<PROFILE>/` as artifacts
-- it can optionally generate same-baseline ImageBuilder images with preloaded
-  `podman`, `tailscale`, and `nfs` package stacks
+1. `prebuild-package-stack.yml`
+   - builds the shared `tailscale + luci-app-podman + nfs*` APK repository once
+     per baseline key
+   - uploads a local repo artifact containing `.apk` files and `packages.adb`
+   - targets `qualcommax/ipq60xx + aarch64_cortex-a53`, not individual profiles
+2. `build-firmware.yml`
+   - keeps the profile matrix for `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`
+   - resolves the same baseline key
+   - downloads the matching prebuilt repo artifact
+   - fails fast if the artifact is missing
+   - reuses that repo during ImageBuilder assembly instead of recompiling the
+     stack from source in each profile job
 
-What it does not do yet:
-
-- no ImageBuilder second stage
-- no custom feed package installation into the final image
-- no build cache tuning yet
-
-That layering comes after the first successful source-build run proves the
-baseline is executable.
+`TEST_ONLY=true` remains available for manual validation runs and skips the
+artifact lookup because it does not compile firmware or assemble ImageBuilder
+outputs.
 
 ## Davidtall-specific overlays
 
