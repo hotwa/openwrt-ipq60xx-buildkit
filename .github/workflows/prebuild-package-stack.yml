@@ -9,12 +9,13 @@ on:
       - ci/build_firmware.sh
       - ci/compute_baseline_key.sh
       - ci/lib.sh
+      - ci/package_prebuilt_release.sh
       - ci/prebuild_package_stack.sh
       - locks/combined-baseline.lock
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   prebuild:
@@ -49,7 +50,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo -E apt -yqq update
-          sudo -E apt -yqq install bc dos2unix git jq zstd
+          sudo -E apt -yqq install bc dos2unix gh git jq zstd
 
       - name: Prebuild shared package stack
         env:
@@ -64,3 +65,10 @@ jobs:
           name: ${{ env.BASELINE_ARTIFACT_NAME }}
           path: dist/prebuilt/${{ env.BASELINE_ARTIFACT_NAME }}
           if-no-files-found: error
+
+      - name: Publish release mirror
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x ./ci/*.sh
+          ./ci/package_prebuilt_release.sh

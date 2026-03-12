@@ -153,6 +153,15 @@ set_package_config_state() {
   esac
 }
 
+clear_package_config_states() {
+  local config_file="$1"
+
+  sed -i \
+    -e '/^CONFIG_PACKAGE_[^=]*=.*/d' \
+    -e '/^# CONFIG_PACKAGE_.* is not set$/d' \
+    "$config_file"
+}
+
 package_in_list() {
   local pkg="$1"
   local package_list="$2"
@@ -179,6 +188,25 @@ disable_prebuilt_stack_packages() {
     [ -n "$pkg" ] || continue
     set_package_config_state "$config_file" "$pkg" unset
   done < <(prebuilt_stack_package_list)
+}
+
+enable_package_list_as_modules() {
+  local config_file="$1"
+  local package_list="$2"
+  local pkg
+
+  while read -r pkg; do
+    [ -n "$pkg" ] || continue
+    set_package_config_state "$config_file" "$pkg" m
+  done < <(printf '%s\n' "$package_list" | tr ' ' '\n' | awk 'NF && !seen[$0]++')
+}
+
+prepare_prebuild_package_only_config() {
+  local config_file="$1"
+
+  clear_package_config_states "$config_file"
+  enable_package_list_as_modules "$config_file" "$(prebuilt_stack_package_list)"
+  disable_excluded_packages "$config_file"
 }
 
 validate_prebuilt_stack_dir() {
@@ -333,6 +361,50 @@ run_build_flow() {
   )
 }
 
+run_prebuild_package_stack_flow() {
+  note "update feeds"
+  (
+    cd "$WORKSPACE/wrt"
+    ./scripts/feeds update -a
+    ./scripts/feeds install -a
+    apply_nfs_kernel_server_v4_hotfix
+  )
+
+  note "apply custom packages"
+  (
+    cd "$WORKSPACE/wrt/package"
+    "$WORKSPACE/Scripts/Packages.sh"
+    "$WORKSPACE/Scripts/Handles.sh"
+  )
+
+  note "prepare overlay packages"
+  prepare_overlay_packages
+
+  note "generate package-stack config"
+  (
+    # shellcheck disable=SC1090
+    . "$WORKSPACE/Scripts/function.sh"
+    cd "$WORKSPACE/wrt"
+    generate_config
+    prepare_prebuild_package_only_config .config
+    "$WORKSPACE/Scripts/Settings.sh"
+    prepare_prebuild_package_only_config .config
+    make defconfig -j"$JOBS"
+  )
+
+  note "download package-stack sources"
+  (
+    cd "$WORKSPACE/wrt"
+    make download -j"$JOBS"
+  )
+
+  note "compile package-stack only"
+  (
+    cd "$WORKSPACE/wrt"
+    make package/compile -j"$JOBS" || make package/compile -j1 V=s
+  )
+}
+
 build_imagebuilder() {
   local archive
 
@@ -441,15 +513,13 @@ stage_prebuilt_imagebuilder_repos() {
   note "staged prebuilt apk count: $copied_count"
 }
 
-stage_local_imagebuilder_repos() {
-  local ib_root="$1"
+stage_source_build_repos_to_root() {
+  local repo_root="$1"
+  local apk_bin="$2"
   local target_repo
-  local repo_root repo_dir repo_name dest apk_bin copied_count repo_apk_count
+  local repo_dir repo_name dest copied_count repo_apk_count
 
   target_repo="$(resolve_target_package_repo)"
-  repo_root="$ib_root/local"
-  apk_bin="$ib_root/staging_dir/host/bin/apk"
-
   rm -rf "$repo_root"
   mkdir -p "$repo_root"
 
@@ -473,8 +543,14 @@ stage_local_imagebuilder_repos() {
     copied_count="$((copied_count + repo_apk_count))"
   done < <(collect_local_package_dirs "$target_repo")
 
-  [ "$copied_count" -gt 0 ] || fail "no same-build apk packages staged into imagebuilder local repos"
+  [ "$copied_count" -gt 0 ] || fail "no same-build apk packages staged into $repo_root"
   note "staged same-build apk count: $copied_count"
+}
+
+stage_local_imagebuilder_repos() {
+  local ib_root="$1"
+
+  stage_source_build_repos_to_root "$ib_root/local" "$ib_root/staging_dir/host/bin/apk"
 }
 
 write_imagebuilder_repositories() {

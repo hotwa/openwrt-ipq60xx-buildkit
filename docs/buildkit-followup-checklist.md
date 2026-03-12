@@ -5,9 +5,11 @@ Last updated: 2026-03-12 18:40 CST
 ## Two-stage CI architecture
 
 - [x] Shared prebuild workflow added: `.github/workflows/prebuild-package-stack.yml`
-  - Scope: one `qualcommax/ipq60xx + aarch64_cortex-a53` APK repository per
-    baseline key
+  - Scope: one `qualcommax/ipq60xx + aarch64_cortex-a53` package-stack-only APK
+    repository per baseline key
   - Output: local repo artifact with `.apk` files and `packages.adb`
+  - Output mirror: baseline-keyed GitHub Release asset with the same repo
+    snapshot
 - [x] Profile firmware workflow kept as matrix:
   - `IPQ60XX-NOWIFI`
   - `IPQ60XX-WIFI`
@@ -20,16 +22,24 @@ Last updated: 2026-03-12 18:40 CST
   - `WRT_ARCH`
 - [x] `build-firmware` now depends on `prebuild-package-stack` for the shared
   `tailscale + luci-app-podman + nfs*` repo.
+- [x] `build-firmware` is chained from successful prebuild runs via
+  `workflow_run`.
 - [x] Missing prebuilt artifacts are an intentional fail-fast condition.
+- [x] Artifact-first rule is now explicit:
+  - downstream firmware builds use the Actions artifact
+  - Release is archival only, not the normal downstream input
 
 ## Manual operator steps
 
 - [x] Change the lock or package-stack build logic.
-- [x] Run `prebuild-package-stack` first.
+- [x] Run `prebuild-package-stack` first, or push a matching change to `main`.
 - [x] Wait for artifact `prebuilt-stack-<baseline-key>` to upload.
-- [x] Run or push `build-firmware`.
+- [x] Wait for `build-firmware` to start automatically from `workflow_run`.
+- [x] If needed, manually dispatch `build-firmware` after prebuild finishes.
 - [x] If `build-firmware` fails before bootstrap with a missing prebuilt
   artifact message, re-run `prebuild-package-stack` for the same baseline.
+- [x] If Release upload fails but the artifact exists, fix repository
+  `GITHUB_TOKEN` write permissions before retrying prebuild.
 
 ## Fail-fast rule
 
@@ -39,6 +49,15 @@ Last updated: 2026-03-12 18:40 CST
   operators to run `prebuild-package-stack` first.
 - [x] `TEST_ONLY=true` skips the artifact dependency because that mode does not
   compile or assemble the preload image path.
+
+## Permissions rule
+
+- [x] Same-repo Release publishing uses `GITHUB_TOKEN`; no PAT is required by
+  default.
+- [x] Prebuild workflow must keep `contents: write`.
+- [x] Firmware workflow must keep `actions: read`.
+- [x] If a future agent changes token model or moves assets cross-repo, update
+  this checklist and `README.md` in the same change.
 
 ## Current state
 

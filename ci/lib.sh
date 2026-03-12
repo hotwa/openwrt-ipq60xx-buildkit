@@ -93,6 +93,18 @@ baseline_artifact_name() {
   printf 'prebuilt-stack-%s\n' "$(compute_baseline_key "$wrt_arch")"
 }
 
+baseline_release_tag() {
+  local wrt_arch="$1"
+
+  baseline_artifact_name "$wrt_arch"
+}
+
+baseline_release_asset_name() {
+  local wrt_arch="$1"
+
+  printf '%s.tar.zst\n' "$(baseline_release_tag "$wrt_arch")"
+}
+
 resolve_branch_sha() {
   local repo="$1"
   local branch="$2"

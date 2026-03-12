@@ -1,9 +1,11 @@
 name: build-firmware
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - prebuild-package-stack
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       test_only:
@@ -23,6 +25,7 @@ permissions:
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     name: ${{ matrix.profile }}
     runs-on: ubuntu-24.04
     timeout-minutes: 355
@@ -36,6 +39,8 @@ jobs:
     steps:
       - name: Checkout buildkit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Export baseline env
         run: |
@@ -48,17 +53,37 @@ jobs:
         uses: actions/github-script@v7
         env:
           BASELINE_ARTIFACT_NAME: ${{ env.BASELINE_ARTIFACT_NAME }}
+          TRIGGER_RUN_ID: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.id || '' }}
         with:
           script: |
             const artifactName = process.env.BASELINE_ARTIFACT_NAME;
+            const triggerRunId = process.env.TRIGGER_RUN_ID;
             const { owner, repo } = context.repo;
-            const artifacts = await github.paginate(
-              github.rest.actions.listArtifactsForRepo,
-              { owner, repo, per_page: 100 }
-            );
-            const matches = artifacts
-              .filter((artifact) => artifact.name === artifactName && !artifact.expired)
-              .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
+            let matches = [];
+
+            if (triggerRunId) {
+              const artifacts = await github.paginate(
+                github.rest.actions.listWorkflowRunArtifacts,
+                { owner, repo, run_id: Number(triggerRunId), per_page: 100 }
+              );
+              matches = artifacts
+                .filter((artifact) => artifact.name === artifactName && !artifact.expired)
+                .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
+              if (!matches.length) {
+                core.setFailed(
+                  `Missing prebuilt artifact ${artifactName} in prebuild run ${triggerRunId}. Re-run the "prebuild-package-stack" workflow first.`
+                );
+                return;
+              }
+            } else {
+              const artifacts = await github.paginate(
+                github.rest.actions.listArtifactsForRepo,
+                { owner, repo, per_page: 100 }
+              );
+              matches = artifacts
+                .filter((artifact) => artifact.name === artifactName && !artifact.expired)
+                .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
+            }
 
             if (!matches.length) {
               core.setFailed(
@@ -68,7 +93,8 @@ jobs:
             }
 
             const artifact = matches[0];
-            if (!artifact.workflow_run || !artifact.workflow_run.id) {
+            const resolvedRunId = String(triggerRunId || artifact.workflow_run?.id || "");
+            if (!resolvedRunId) {
               core.setFailed(
                 `Artifact ${artifactName} is missing workflow metadata, cannot download it safely.`
               );
@@ -76,10 +102,10 @@ jobs:
             }
 
             core.info(
-              `Using prebuilt artifact ${artifact.name} from run ${artifact.workflow_run.id}.`
+              `Using prebuilt artifact ${artifact.name} from run ${resolvedRunId}.`
             );
             core.setOutput("artifact-name", artifact.name);
-            core.setOutput("run-id", String(artifact.workflow_run.id));
+            core.setOutput("run-id", resolvedRunId);
 
       - name: Download prebuilt artifact
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_only) }}
@@ -114,8 +140,8 @@ jobs:
       - name: Build firmware
         env:
           PROFILE: ${{ matrix.profile }}
-          TEST_ONLY: ${{ inputs.test_only && 'true' || 'false' }}
-          ASSEMBLE_IMAGEBUILDER: ${{ github.event_name == 'push' && 'true' || (inputs.assemble_imagebuilder && 'true' || 'false') }}
+          TEST_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.test_only && 'true' || 'false' }}
+          ASSEMBLE_IMAGEBUILDER: ${{ github.event_name == 'workflow_dispatch' && (inputs.assemble_imagebuilder && 'true' || 'false') || 'true' }}
           USE_PREBUILT_STACK: ${{ github.event_name == 'workflow_dispatch' && inputs.test_only && 'false' || 'true' }}
           PREBUILT_STACK_DIR: ${{ github.workspace }}/.artifacts/prebuilt
           PREBUILT_ARTIFACT_NAME: ${{ env.BASELINE_ARTIFACT_NAME }}

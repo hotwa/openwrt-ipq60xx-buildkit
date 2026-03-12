@@ -111,14 +111,17 @@ same package selection logic.
 The firmware flow now runs in two stages:
 
 1. `prebuild-package-stack.yml`
-   - builds the shared `tailscale + luci-app-podman + nfs*` APK repository once
-     per baseline key
+   - builds only the shared `tailscale + luci-app-podman + nfs*` package stack
+     once per baseline key
+   - does not build full firmware images
    - uploads a local repo artifact containing `.apk` files and `packages.adb`
+   - mirrors the same repo snapshot to a baseline-keyed GitHub Release asset
    - targets `qualcommax/ipq60xx + aarch64_cortex-a53`, not individual profiles
 2. `build-firmware.yml`
    - keeps the profile matrix for `IPQ60XX-NOWIFI` and `IPQ60XX-WIFI`
-   - resolves the same baseline key
-   - downloads the matching prebuilt repo artifact
+   - is chained from successful prebuild runs via `workflow_run`
+   - resolves the same baseline key from the prebuild commit that triggered it
+   - downloads the matching prebuilt repo artifact from that triggering run
    - fails fast if the artifact is missing
    - reuses that repo during ImageBuilder assembly instead of recompiling the
      stack from source in each profile job
@@ -126,6 +129,33 @@ The firmware flow now runs in two stages:
 `TEST_ONLY=true` remains available for manual validation runs and skips the
 artifact lookup because it does not compile firmware or assemble ImageBuilder
 outputs.
+
+## Artifact-First Rule
+
+For this repository, the source of truth between CI stages is the GitHub
+Actions artifact produced by `prebuild-package-stack`.
+
+- `build-firmware` consumes the artifact from the triggering prebuild run
+- the GitHub Release asset is a mirror of the same repo snapshot
+- the Release exists for archival, inspection, and manual rollback
+- the Release is not the default input for downstream firmware builds
+
+If a future agent changes this behavior, they must update the workflows and
+docs together. Do not silently switch downstream consumption from artifact to
+Release.
+
+## Permissions
+
+Same-repo automation does not require a separate PAT today.
+
+- prebuild release publishing uses the built-in `GITHUB_TOKEN`
+- `.github/workflows/prebuild-package-stack.yml` requires `contents: write`
+- `.github/workflows/build-firmware.yml` requires `actions: read`
+- repository Actions settings must allow write permissions for `GITHUB_TOKEN`
+
+If the repository policy forces `GITHUB_TOKEN` to read-only, Release publishing
+will fail until that repository setting is changed or a stronger token is wired
+in explicitly.
 
 ## Davidtall-specific overlays
 
