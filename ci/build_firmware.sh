@@ -370,6 +370,7 @@ prepare_package_stack_build_prerequisites() {
     cd "$WORKSPACE/wrt"
     make tools/install -j"$JOBS" || make tools/install -j1 V=s
     make toolchain/install -j"$JOBS" || make toolchain/install -j1 V=s
+    make target/linux/prepare -j"$JOBS" || make target/linux/prepare -j1 V=s
   )
 }
 
