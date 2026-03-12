@@ -374,6 +374,41 @@ prepare_package_stack_build_prerequisites() {
   )
 }
 
+prebuild_compile_targets() {
+  cat <<'EOF'
+package/feeds/packages/tailscale/compile
+package/feeds/luci/luci-app-tailscale-community/compile
+package/feeds/packages/podman/compile
+package/feeds/packages/conmon/compile
+package/feeds/packages/external-protocol/compile
+package/feeds/packages/netavark/compile
+package/feeds/packages/rpcbind/compile
+package/feeds/packages/nfs-kernel-server/compile
+package/feeds/luci/luci-app-nfs/compile
+package/feeds/nss_packages/nss-firmware/compile
+package/feeds/nss_packages/nss-eip-firmware/compile
+package/kernel/linux/compile
+package/luci-app-podman/compile
+EOF
+}
+
+compile_prebuild_stack_packages() {
+  local targets=()
+  local target
+
+  while read -r target; do
+    [ -n "$target" ] || continue
+    targets+=("$target")
+  done < <(prebuild_compile_targets)
+
+  [ "${#targets[@]}" -gt 0 ] || fail "prebuild compile target list is empty"
+  note "compile package-stack targets: ${targets[*]}"
+  (
+    cd "$WORKSPACE/wrt"
+    make "${targets[@]}" -j"$JOBS" || make "${targets[@]}" -j1 V=s
+  )
+}
+
 run_prebuild_package_stack_flow() {
   note "update feeds"
   (
@@ -413,11 +448,7 @@ run_prebuild_package_stack_flow() {
 
   prepare_package_stack_build_prerequisites
 
-  note "compile package-stack only"
-  (
-    cd "$WORKSPACE/wrt"
-    make package/compile -j"$JOBS" || make package/compile -j1 V=s
-  )
+  compile_prebuild_stack_packages
 }
 
 build_imagebuilder() {

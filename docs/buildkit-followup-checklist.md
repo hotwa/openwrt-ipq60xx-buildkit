@@ -12,7 +12,7 @@ Last updated: 2026-03-12 18:40 CST
     snapshot
   - Build order: `make download` -> `make tools/install` ->
     `make toolchain/install` -> `make target/linux/prepare` ->
-    `make package/compile`
+    explicit package compile targets only
 - [x] Profile firmware workflow kept as matrix:
   - `IPQ60XX-NOWIFI`
   - `IPQ60XX-WIFI`
