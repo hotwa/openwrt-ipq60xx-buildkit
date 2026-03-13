@@ -44,7 +44,7 @@ prepare_package_stack_build_prerequisites
 grep -qxF 'tools/install -j7' "$MAKE_LOG"
 grep -qxF 'toolchain/install -j7' "$MAKE_LOG"
 grep -qxF 'target/linux/prepare -j7' "$MAKE_LOG"
-grep -qxF 'target/linux/oldconfig -j7' "$MAKE_LOG"
+grep -qxF 'kernel_oldconfig -j7' "$MAKE_LOG"
 
 if [ "$(sed -n '1p' "$MAKE_LOG")" != 'tools/install -j7' ]; then
   printf 'expected tools/install to run first\n' >&2
@@ -61,8 +61,8 @@ if [ "$(sed -n '3p' "$MAKE_LOG")" != 'target/linux/prepare -j7' ]; then
   exit 1
 fi
 
-if [ "$(sed -n '4p' "$MAKE_LOG")" != 'target/linux/oldconfig -j7' ]; then
-  printf 'expected target/linux/oldconfig to run fourth\n' >&2
+if [ "$(sed -n '4p' "$MAKE_LOG")" != 'kernel_oldconfig -j7' ]; then
+  printf 'expected kernel_oldconfig to run fourth\n' >&2
   exit 1
 fi
 
@@ -73,6 +73,11 @@ fi
 
 if grep -q '^target/linux/compile' "$MAKE_LOG"; then
   printf 'unexpected target/linux/compile in package-stack prerequisites\n' >&2
+  exit 1
+fi
+
+if grep -q '^target/linux/oldconfig' "$MAKE_LOG"; then
+  printf 'unexpected target/linux/oldconfig in package-stack prerequisites\n' >&2
   exit 1
 fi
 

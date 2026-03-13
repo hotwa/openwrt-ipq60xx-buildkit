@@ -117,7 +117,7 @@ The firmware flow now runs in two stages:
    - still prepares OpenWrt host tools and toolchain explicitly before
      compiling the shared stack, because package-only prebuilds do not get those
      prerequisites for free
-   - prepares `target/linux` and runs `target/linux/oldconfig` ahead of the
+   - prepares `target/linux` and runs top-level `kernel_oldconfig` ahead of the
      stack packages so kernel-facing packages see a generated
      `linux-*/.config` without triggering the wider image compile path
    - compiles an explicit source package target list instead of global
