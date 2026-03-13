@@ -120,6 +120,9 @@ The firmware flow now runs in two stages:
    - prepares `target/linux` and runs top-level `kernel_oldconfig` ahead of the
      stack packages so kernel-facing packages see a generated
      `linux-*/.config` without triggering the wider image compile path
+   - runs package-only config cleanup again after `make defconfig`, because
+     `defconfig` re-enables target default packages such as
+     `kmod-gpio-button-hotplug`
    - compiles an explicit source package target list instead of global
      `package/compile`, so unrelated target defaults do not leak into prebuild
    - uploads a local repo artifact containing `.apk` files and `packages.adb`

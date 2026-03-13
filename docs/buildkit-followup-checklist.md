@@ -12,7 +12,7 @@ Last updated: 2026-03-13 00:35 CST
     snapshot
   - Build order: `make download` -> `make tools/install` ->
     `make toolchain/install` -> `make target/linux/prepare` ->
-    `make kernel_oldconfig` ->
+    `make kernel_oldconfig` -> post-`defconfig` package-only cleanup ->
     explicit package compile targets only
 - [x] Profile firmware workflow kept as matrix:
   - `IPQ60XX-NOWIFI`
@@ -70,6 +70,9 @@ Last updated: 2026-03-13 00:35 CST
   target/subtarget token such as `qualcommax_ipq60xx`.
 - [x] Keep those two meanings separate in local scripts, or prebuild will read
   the wrong `target/linux/...` path during `generate_config`.
+- [x] `make defconfig` re-enables target default packages; prebuild must strip
+  them again afterward so `kmod-gpio-button-hotplug` and similar defaults do
+  not leak into package-stack-only compiles.
 
 ## Current state
 

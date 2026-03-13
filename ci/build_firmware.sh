@@ -409,6 +409,22 @@ compile_prebuild_stack_packages() {
   )
 }
 
+generate_prebuild_package_stack_config() {
+  (
+    # shellcheck disable=SC1090
+    . "$WORKSPACE/Scripts/function.sh"
+    cd "$WORKSPACE/wrt"
+    generate_config
+    prepare_prebuild_package_only_config .config
+    "$WORKSPACE/Scripts/Settings.sh"
+    prepare_prebuild_package_only_config .config
+    make defconfig -j"$JOBS"
+    # defconfig re-enables target default packages such as kmod-gpio-button-hotplug.
+    # Strip those back out so package-only prebuilds stay scoped to the shared stack.
+    prepare_prebuild_package_only_config .config
+  )
+}
+
 run_prebuild_package_stack_flow() {
   note "update feeds"
   (
@@ -429,16 +445,7 @@ run_prebuild_package_stack_flow() {
   prepare_overlay_packages
 
   note "generate package-stack config"
-  (
-    # shellcheck disable=SC1090
-    . "$WORKSPACE/Scripts/function.sh"
-    cd "$WORKSPACE/wrt"
-    generate_config
-    prepare_prebuild_package_only_config .config
-    "$WORKSPACE/Scripts/Settings.sh"
-    prepare_prebuild_package_only_config .config
-    make defconfig -j"$JOBS"
-  )
+  generate_prebuild_package_stack_config
 
   note "download package-stack sources"
   (
