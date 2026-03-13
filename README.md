@@ -117,8 +117,8 @@ The firmware flow now runs in two stages:
    - still prepares OpenWrt host tools and toolchain explicitly before
      `make package/compile`, because package-only prebuilds do not get those
      prerequisites for free
-   - also prepares `target/linux` before package compile, because the shared
-     stack includes kernel-facing packages such as NFS kmods
+   - also compiles `target/linux` ahead of the stack packages, because the
+     shared stack includes kernel-facing packages such as NFS kmods
    - compiles an explicit source package target list instead of global
      `package/compile`, so unrelated target defaults do not leak into prebuild
    - uploads a local repo artifact containing `.apk` files and `packages.adb`

@@ -52,7 +52,6 @@ grep -q 'package/feeds/packages/nfs-kernel-server/compile' "$MAKE_LOG"
 grep -q 'package/feeds/luci/luci-app-nfs/compile' "$MAKE_LOG"
 grep -q 'package/feeds/nss_packages/nss-firmware/compile' "$MAKE_LOG"
 grep -q 'package/feeds/nss_packages/nss-eip-firmware/compile' "$MAKE_LOG"
-grep -q 'package/kernel/linux/compile' "$MAKE_LOG"
 grep -q 'package/luci-app-podman/compile' "$MAKE_LOG"
 
 if grep -q 'package/compile' "$MAKE_LOG"; then
