@@ -1,6 +1,6 @@
 # Buildkit Follow-up Checklist
 
-Last updated: 2026-03-12 18:40 CST
+Last updated: 2026-03-13 00:35 CST
 
 ## Two-stage CI architecture
 
@@ -11,7 +11,8 @@ Last updated: 2026-03-12 18:40 CST
   - Output mirror: baseline-keyed GitHub Release asset with the same repo
     snapshot
   - Build order: `make download` -> `make tools/install` ->
-    `make toolchain/install` -> `make target/linux/compile` ->
+    `make toolchain/install` -> `make target/linux/prepare` ->
+    `make target/linux/oldconfig` ->
     explicit package compile targets only
 - [x] Profile firmware workflow kept as matrix:
   - `IPQ60XX-NOWIFI`
