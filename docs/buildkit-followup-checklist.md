@@ -11,8 +11,8 @@ Last updated: 2026-03-13 00:35 CST
   - Output mirror: baseline-keyed GitHub Release asset with the same repo
     snapshot
   - Build order: `make download` -> `make tools/install` ->
-    `make toolchain/install` -> `make target/linux/prepare` ->
-    `make kernel_oldconfig` -> post-`defconfig` package-only cleanup ->
+    `make toolchain/install` -> `make target/linux/compile` ->
+    post-`defconfig` package-only cleanup ->
     explicit package compile targets only
 - [x] Profile firmware workflow kept as matrix:
   - `IPQ60XX-NOWIFI`
